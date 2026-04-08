@@ -1024,21 +1024,24 @@ async function loadData() {
 }
 
 // ── NORMALISE ──
-// Adapte le schéma JSON de l'API vers notre format interne
+// Adapte le schema JSON de l'API vers notre format interne
+// Champs reels : geom:{lat,lon}, gazole_prix, sp95_prix, e10_prix, sp98_prix, e85_prix, gplc_prix
+// horaires_automate_24_24 (Oui/Non), departement, region, pop
 function normalise(records) {
   return records.map(r => {
-    // Coordonnées : champ "geom" = {lat, lon} ou "latitude"/"longitude" décimaux
+    // Coordonnees : geom est un objet {lat, lon} en decimal
     let lat = null, lon = null;
-    if (r.geom && r.geom.lat != null) { lat = +r.geom.lat; lon = +r.geom.lon; }
-    else if (r.geom && typeof r.geom === 'string' && r.geom.includes(',')) {
-      const p = r.geom.split(','); lat = +p[0].trim(); lon = +p[1].trim();
-    } else if (r.latitude != null && Math.abs(+r.latitude) < 90) {
-      lat = +r.latitude; lon = +r.longitude;
+    if (r.geom && r.geom.lat != null) {
+      lat = +r.geom.lat; lon = +r.geom.lon;
     }
-    // Exclure coordonnées hors France métropolitaine approx
+    // Exclure coordonnees hors France metropolitaine approx
     if (!lat || !lon || lat < 41 || lat > 52 || lon < -5.5 || lon > 10) { lat = null; lon = null; }
 
     const p = k => { const v = +r[k]; return isNaN(v) || v <= 0 ? null : +v.toFixed(3); };
+
+    // Date de mise a jour : prendre la plus recente disponible
+    const maj = r.gazole_maj || r.e10_maj || r.sp98_maj || r.sp95_maj || r.e85_maj || r.gplc_maj || '';
+
     return {
       lat, lon,
       ville:   r.ville || '',
@@ -1046,15 +1049,15 @@ function normalise(records) {
       dept:    r.departement || '',
       region:  r.region || '',
       pop:     r.pop || 'R',
-      auto24:  (r['automate_24_24'] || '').toLowerCase() === 'oui' ? 1 : 0,
-      gazole:  p('prix_gazole'),
-      sp95:    p('prix_sp95'),
-      e10:     p('prix_e10'),
-      sp98:    p('prix_sp98'),
-      e85:     p('prix_e85'),
-      gplc:    p('prix_gplc'),
-      dispo:   r.carburants_disponibles || '',
-      maj:     r.prix_gazole_maj || r.prix_e10_maj || '',
+      auto24:  (r.horaires_automate_24_24 || '').toLowerCase() === 'oui' ? 1 : 0,
+      gazole:  p('gazole_prix'),
+      sp95:    p('sp95_prix'),
+      e10:     p('e10_prix'),
+      sp98:    p('sp98_prix'),
+      e85:     p('e85_prix'),
+      gplc:    p('gplc_prix'),
+      dispo:   Array.isArray(r.carburants_disponibles) ? r.carburants_disponibles.join(', ') : (r.carburants_disponibles || ''),
+      maj,
     };
   });
 }
