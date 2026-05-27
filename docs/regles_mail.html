@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 Règles d'Or — Écriture de Mails Professionnels</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #2c5f6b;
+    --navy-mid: #3a7585;
+    --blue: #4A8998;
+    --blue-light: #6aaab8;
+    --blue-pale: #d0e8ed;
+    --accent: #4A8998;
+    --accent-light: #b8dae1;
+    --cream: #f4f7f8;
+    --bg-section: #eaf3f5;
+    --text: #2a3f45;
+    --text-light: #5f7f88;
+    --white: #ffffff;
+    --border: #ccdfe4;
+    --grey-light: #e8edf0;
+    --grey-mid: #94a8ae;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, #4A8998 0%, #3a7585 60%, #2c5f6b 100%);
+    padding: 72px 40px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 15% 60%, rgba(255,255,255,.10) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 50% at 85% 30%, rgba(255,255,255,.07) 0%, transparent 65%);
+  }
+  .hero-tag {
+    display: inline-block;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.95);
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.30);
+    border-radius: 2px;
+    padding: 4px 14px;
+    margin-bottom: 22px;
+    position: relative;
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    color: var(--white);
+    line-height: 1.15;
+    position: relative;
+    max-width: 700px;
+    margin: 0 auto 16px;
+  }
+  .hero h1 em {
+    color: rgba(255,255,255,.85);
+    font-style: italic;
+  }
+  .hero-sub {
+    color: rgba(255,255,255,.72);
+    font-size: 1rem;
+    font-weight: 300;
+    position: relative;
+    max-width: 540px;
+    margin: 0 auto 36px;
+  }
+  .hero-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+  }
+  .hero-nav a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.22);
+    color: rgba(255,255,255,.88);
+    text-decoration: none;
+    font-size: .8rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 100px;
+    transition: all .2s;
+  }
+  .hero-nav a:hover {
+    background: rgba(255,255,255,.22);
+    color: var(--white);
+  }
+  .hero-nav a .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    background: rgba(255,255,255,.9);
+    color: var(--navy);
+    border-radius: 50%;
+    font-size: .7rem;
+    font-weight: 700;
+  }
+
+  /* ── INTRO BAND ── */
+  .intro-band {
+    background: #3a7585;
+    padding: 22px 40px;
+    text-align: center;
+    color: rgba(255,255,255,.9);
+    font-size: .92rem;
+    font-weight: 300;
+    letter-spacing: .01em;
+  }
+  .intro-band strong { font-weight: 600; color: var(--white); }
+
+  /* ── GRID ── */
+  .rules-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+  }
+
+  .section-label {
+    text-align: center;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 40px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 26px 26px;
+    position: relative;
+    transition: box-shadow .25s, transform .25s;
+  }
+  .card:hover {
+    box-shadow: 0 12px 40px rgba(74,137,152,.13);
+    transform: translateY(-3px);
+  }
+  .card.featured {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 1px var(--blue-pale);
+  }
+  .card.alert {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 1px #dc262620;
+  }
+
+  .card-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    margin-bottom: 14px;
+  }
+  .card-num.blue   { background: #d0e8ed; color: #2c5f6b; }
+  .card-num.amber  { background: #e8f0f2; color: #3a7585; }
+  .card-num.red    { background: #fee2e2; color: #dc2626; }
+  .card-num.teal   { background: #c8e6ea; color: #245c6a; }
+  .card-num.slate  { background: #e4ecee; color: #3d6670; }
+  .card-num.violet { background: #d8e8ec; color: #2c5f6b; }
+
+  .card h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.08rem;
+    color: var(--navy);
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+
+  .card p {
+    font-size: .875rem;
+    color: var(--text-light);
+    margin-bottom: 8px;
+    line-height: 1.55;
+  }
+
+  .card ul {
+    list-style: none;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .card ul li {
+    font-size: .855rem;
+    color: var(--text);
+    padding-left: 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .card ul li::before {
+    content: '›';
+    position: absolute;
+    left: 4px;
+    color: var(--blue);
+    font-weight: 700;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .75rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-bottom: 10px;
+  }
+  .chip.do   { background: #d0e8ed; color: #245c6a; }
+  .chip.dont { background: #fee2e2; color: #991b1b; }
+  .chip.rgpd { background: #fef3c7; color: #92400e; }
+
+  .example-box {
+    margin-top: 14px;
+    background: #eaf3f5;
+    border-left: 3px solid var(--blue);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: .82rem;
+    color: var(--text);
+    font-style: italic;
+  }
+  .example-box strong { font-style: normal; color: var(--navy); font-weight: 600; }
+
+  .bad-box {
+    margin-top: 10px;
+    background: #fff7f7;
+    border-left: 3px solid #f87171;
+    padding: 8px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: .82rem;
+    color: #991b1b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── FULL-WIDTH CARD ── */
+  .card.wide {
+    grid-column: 1 / -1;
+  }
+  .card.wide .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 14px;
+  }
+  @media (max-width: 600px) {
+    .card.wide .cols { grid-template-columns: 1fr; }
+  }
+
+  /* ── FOOTER RULE ── */
+  .footer-rule {
+    background: #2c5f6b;
+    padding: 40px 40px;
+    text-align: center;
+  }
+  .footer-rule p {
+    color: rgba(255,255,255,.55);
+    font-size: .82rem;
+  }
+  .footer-rule strong { color: rgba(255,255,255,.9); }
+
+  /* ── STICKY PROGRESS BAR ── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 0%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--blue-light));
+    z-index: 1000;
+    transition: width .1s;
+  }
+
+  /* ── SCROLL ANIMATION ── */
+  .card {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity .5s, transform .5s, box-shadow .25s;
+  }
+  .card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .card:hover {
+    box-shadow: 0 12px 40px rgba(74,137,152,.13);
+    transform: translateY(-3px) !important;
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-tag">Communication interne — Bonnes pratiques</div>
+  <h1>10 règles d'or pour écrire<br>des mails <em>efficaces</em></h1>
+  <p class="hero-sub">Des pratiques simples qui améliorent la qualité, la clarté et le respect de chacun dans nos échanges quotidiens.</p>
+  <nav class="hero-nav">
+    <a href="#r1"><span class="num">1</span> Objet clair</a>
+    <a href="#r2"><span class="num">2</span> Destinataires</a>
+    <a href="#r3"><span class="num">3</span> Ton adapté</a>
+    <a href="#r4"><span class="num">4</span> Structure</a>
+    <a href="#r5"><span class="num">5</span> Essentiel en tête</a>
+    <a href="#r6"><span class="num">6</span> Attentes & délais</a>
+    <a href="#r7"><span class="num">7</span> Pièces jointes</a>
+    <a href="#r8"><span class="num">8</span> RGPD</a>
+    <a href="#r9"><span class="num">9</span> Réponses</a>
+    <a href="#r10"><span class="num">10</span> Relire</a>
+  </nav>
+</header>
+
+<div class="intro-band">
+  Un mail professionnel efficace, c'est <strong>du temps gagné pour vous comme pour vos collègues.</strong> Ces 10 règles sont à appliquer dès aujourd'hui.
+</div>
+
+<!-- RULES GRID -->
+<section class="rules-section">
+  <p class="section-label">Les 10 règles à respecter</p>
+
+  <div class="grid">
+
+    <!-- 1 -->
+    <div class="card" id="r1">
+      <div class="card-num blue">1</div>
+      <h2>Mettre un objet clair et pertinent</h2>
+      <p>L'objet est la première chose lue — il détermine si votre mail sera ouvert, et quand.</p>
+      <ul>
+        <li>Aller droit au but, avec l'action ou le sujet précis</li>
+        <li>Mentionner une échéance si elle est critique</li>
+        <li>Éviter les formulations vagues ou trop génériques</li>
+      </ul>
+      <div class="example-box"><strong>✓ Bien :</strong> "Demande validation projet ERP – échéance 30/05"</div>
+      <div class="bad-box">✗ À éviter : "Info" / "Urgent" / "Problème"</div>
+    </div>
+
+    <!-- 2 -->
+    <div class="card" id="r2">
+      <div class="card-num teal">2</div>
+      <h2>Cibler précisément les destinataires</h2>
+      <p>Chaque destinataire doit avoir une raison d'être dans le mail.</p>
+      <ul>
+        <li><strong>À :</strong> personnes directement concernées, qui doivent agir</li>
+        <li><strong>CC :</strong> personnes à informer uniquement, sans action attendue</li>
+        <li>Éviter les envois "en masse" inutiles qui noient l'information</li>
+      </ul>
+      <div class="example-box"><strong>Règle simple :</strong> si la personne n'a rien à faire avec ce mail, elle n'a pas à le recevoir.</div>
+    </div>
+
+    <!-- 3 -->
+    <div class="card alert" id="r3">
+      <div class="card-num red">3</div>
+      <h2>Éviter les majuscules et les abus de ponctuation</h2>
+      <p>Le style d'écriture véhicule une <strong>tonalité</strong>. Certains usages sont perçus comme agressifs, même involontairement.</p>
+      <ul>
+        <li>Les MAJUSCULES sont l'équivalent d'un cri à l'écrit</li>
+        <li>Limiter les "!!!", "???", les suites de points de suspension</li>
+        <li>Préférer une formulation calme et directe</li>
+      </ul>
+      <div class="bad-box">✗ "C'EST URGENT !!! Vous n'avez TOUJOURS pas répondu ???"</div>
+    </div>
+
+    <!-- 4 -->
+    <div class="card" id="r4">
+      <div class="card-num blue">4</div>
+      <h2>Être concis et structuré</h2>
+      <p>Un mail bien structuré est lu jusqu'au bout. Un mail dense et confus est survolé ou ignoré.</p>
+      <ul>
+        <li><strong>1 mail = 1 objectif</strong> — ne pas mélanger les sujets</li>
+        <li>Paragraphes courts, aérés</li>
+        <li>Listes à puces pour les éléments multiples</li>
+        <li>Gras réservé aux points vraiment essentiels</li>
+      </ul>
+    </div>
+
+    <!-- 5 -->
+    <div class="card featured" id="r5">
+      <div class="card-num violet">5</div>
+      <h2>Aller à l'essentiel dès le début</h2>
+      <p>Le destinataire ne doit pas chercher pourquoi il reçoit ce mail.</p>
+      <p>La <strong>première phrase</strong> doit répondre à la question : <em>Pourquoi est-ce que j'écris ?</em></p>
+      <div class="example-box"><strong>✓ Bien :</strong> "Je vous contacte pour obtenir votre validation sur le budget prévisionnel 2026 avant le 2 juin."</div>
+    </div>
+
+    <!-- 6 -->
+    <div class="card" id="r6">
+      <div class="card-num amber">6</div>
+      <h2>Indiquer les attentes et les délais</h2>
+      <p>Sans délai ni action clairement définie, un mail peut rester sans suite indéfiniment.</p>
+      <ul>
+        <li>Préciser l'action attendue : valider, répondre, transmettre…</li>
+        <li>Mentionner une date ou une urgence si nécessaire</li>
+        <li>Une seule demande par mail, formulée explicitement</li>
+      </ul>
+      <div class="example-box"><strong>✓ Exemple :</strong> "Merci de valider ce document avant vendredi 12h."</div>
+    </div>
+
+    <!-- 7 -->
+    <div class="card" id="r7">
+      <div class="card-num teal">7</div>
+      <h2>Gérer correctement les pièces jointes</h2>
+      <p>Une pièce jointe non annoncée peut passer inaperçue. Un fichier mal nommé est introuvable.</p>
+      <ul>
+        <li>Nommer les fichiers de façon explicite (date, version, sujet)</li>
+        <li>Mentionner leur présence dans le corps du mail</li>
+        <li>Éviter les fichiers inutiles ou dont le poids dépasse 5 Mo</li>
+        <li>Privilégier un lien de partage pour les fichiers volumineux</li>
+      </ul>
+    </div>
+
+    <!-- 8 -->
+    <div class="card alert" id="r8">
+      <div class="card-num red">8</div>
+      <h2>Attention RGPD</h2>
+      <div class="chip rgpd">⚠ Obligation légale</div>
+      <p>La protection des données personnelles s'applique aussi aux échanges par mail.</p>
+      <ul>
+        <li>Limiter la diffusion de données sensibles aux seules personnes concernées</li>
+        <li>Ne jamais transférer ou faire suivre des pièces jointes contenant des données personnelles sans vérification préalable</li>
+        <li>En cas de doute, consulter le DPO ou votre responsable</li>
+      </ul>
+    </div>
+
+    <!-- 9 -->
+    <div class="card" id="r9">
+      <div class="card-num slate">9</div>
+      <h2>Répondre efficacement</h2>
+      <p>La gestion des réponses conditionne la clarté des échanges dans le temps.</p>
+      <ul>
+        <li>Utiliser "Répondre à tous" uniquement si tous les destinataires ont besoin de la réponse</li>
+        <li>Synthétiser plutôt que d'empiler les échanges</li>
+        <li>Accusé de réception bref si vous ne pouvez pas répondre de suite</li>
+      </ul>
+    </div>
+
+    <!-- 10 – full width -->
+    <div class="card wide" id="r10">
+      <div class="card-num violet">10</div>
+      <h2>Relire avant envoi — toujours</h2>
+      <p>Une relecture de 30 secondes peut éviter un malentendu, une erreur d'adressage ou un mail envoyé trop tôt dans le feu de l'action.</p>
+      <div class="cols">
+        <div>
+          <div class="chip do">✓ Points à vérifier</div>
+          <ul>
+            <li>Orthographe et syntaxe</li>
+            <li>Cohérence du message avec l'objet</li>
+            <li>Destinataires — à, CC, CCI</li>
+            <li>Pièces jointes bien présentes</li>
+            <li>Ton approprié au contexte</li>
+          </ul>
+        </div>
+        <div>
+          <div class="chip dont">✗ Pièges fréquents</div>
+          <ul>
+            <li>Envoyer sous le coup de l'émotion</li>
+            <li>Oublier la pièce jointe mentionnée</li>
+            <li>Inclure la mauvaise version d'un fichier</li>
+            <li>Répondre à tous par réflexe</li>
+            <li>Objet non mis à jour sur un sujet qui a évolué</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer-rule">
+  <p>Ces règles s'appliquent à l'ensemble des échanges internes et externes. — <strong>Communication professionnelle — LC Logement</strong></p>
+</footer>
+
+<script>
+  // Progress bar on scroll
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.body.scrollHeight - window.innerHeight;
+    document.getElementById('progress-bar').style.width = (scrollTop / docHeight * 100) + '%';
+  });
+
+  // Card reveal on scroll
+  const cards = document.querySelectorAll('.card');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), 60 * i);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  cards.forEach(c => observer.observe(c));
+</script>
+</body>
+</html>
