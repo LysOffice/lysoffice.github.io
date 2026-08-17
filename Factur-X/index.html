@@ -33,6 +33,9 @@
   header.top h1{font-family:var(--serif);font-weight:600;font-size:30px;margin:0;letter-spacing:0.2px;}
   header.top h1 .x{color:var(--gold);}
   header.top p{margin:4px 0 0;font-size:13px;color:var(--ink-soft);max-width:520px;}
+  .top-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+  .icon-btn{display:flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--ink);border-radius:2px;background:var(--panel);color:var(--ink);font-family:var(--sans);font-size:12.5px;font-weight:600;cursor:pointer;}
+  .icon-btn:hover{background:var(--ink);color:#fff;}
   .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin:0 0 4px;}
 
   .grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:22px;align-items:start;}
@@ -119,6 +122,17 @@
       <p class="eyebrow">Facturation électronique · France 2026</p>
       <h1>Générateur Factur<span class="x">-X</span></h1>
       <p>Crée un PDF avec fichier XML structuré (CII, profil BASIC) intégré — le format hybride exigé par la réforme B2B. Tout se passe dans le navigateur, rien n'est envoyé sur un serveur.</p>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btn-export-data" type="button" title="Exporter les profils et le compteur de numérotation en JSON">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+        <span>Exporter</span>
+      </button>
+      <button class="icon-btn" id="btn-import-data" type="button" title="Importer un fichier JSON exporté depuis un autre navigateur">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 3h16"/></svg>
+        <span>Importer</span>
+      </button>
+      <input type="file" id="import-file-input" accept="application/json" style="display:none;">
     </div>
   </header>
 
@@ -220,7 +234,13 @@
       <div class="panel">
         <h2><span class="num">03</span> Facture</h2>
         <div class="field-row triple">
-          <div><label for="i-number">Numéro</label><input id="i-number" type="text" placeholder="FA-2026-0001"></div>
+          <div>
+            <label for="i-number">Numéro</label>
+            <div style="display:flex;gap:6px;">
+              <input id="i-number" type="text" placeholder="FA-2026-08-0001" style="flex:1;">
+              <button class="btn btn-ghost" id="btn-next-number" type="button" title="Proposer le numéro suivant" style="padding:8px 10px;font-size:11.5px;white-space:nowrap;">N° suivant</button>
+            </div>
+          </div>
           <div><label for="i-issue">Date d'émission</label><input id="i-issue" type="date"></div>
           <div><label for="i-due">Date d'échéance</label><input id="i-due" type="date"></div>
         </div>
@@ -589,6 +609,110 @@
     deleteBtnId: 'btn-delete-buyer-profile',
     hintId: 'buyer-profile-hint',
     label: 'acheteur'
+  });
+
+  // ---------- Compteur de numérotation FA-AAAA-MM-NNNN ----------
+  const INVOICE_COUNTER_KEY = 'facturx_invoice_counter_v1';
+  const INVOICE_NUMBER_RE = /^FA-(\d{4})-(\d{2})-(\d{4})$/;
+
+  function loadInvoiceCounters(){
+    if (!hasStorage) return {};
+    try { return JSON.parse(localStorage.getItem(INVOICE_COUNTER_KEY) || '{}'); }
+    catch (e) { return {}; }
+  }
+  function saveInvoiceCounters(counters){
+    if (!hasStorage) return;
+    try { localStorage.setItem(INVOICE_COUNTER_KEY, JSON.stringify(counters)); } catch (e) {}
+  }
+  function yearMonthFromDate(dateStr){
+    const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+    const year = String(d.getFullYear());
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return { key: `${year}-${month}`, year, month };
+  }
+  function suggestNextInvoiceNumber(dateStr){
+    const { key, year, month } = yearMonthFromDate(dateStr);
+    const counters = loadInvoiceCounters();
+    const next = (counters[key] || 0) + 1;
+    return `FA-${year}-${month}-${String(next).padStart(4, '0')}`;
+  }
+  // Enregistre le numéro utilisé comme "dernière facture en base" pour son mois,
+  // pour que la prochaine suggestion reparte juste après — que le numéro ait été
+  // proposé automatiquement ou saisi/modifié à la main.
+  function commitInvoiceNumberIfMatches(numberStr){
+    const m = numberStr && numberStr.match(INVOICE_NUMBER_RE);
+    if (!m) return;
+    const key = `${m[1]}-${m[2]}`;
+    const n = parseInt(m[3], 10);
+    const counters = loadInvoiceCounters();
+    if (!counters[key] || counters[key] < n){
+      counters[key] = n;
+      saveInvoiceCounters(counters);
+    }
+  }
+
+  el('btn-next-number').addEventListener('click', () => {
+    el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
+    refresh();
+  });
+
+  // ---------- Import / export des données navigateur ----------
+  const FACTURX_STORAGE_KEYS = [
+    'facturx_seller_profiles_v1',
+    'facturx_last_seller_profile_v1',
+    'facturx_buyer_profiles_v1',
+    'facturx_last_buyer_profile_v1',
+    'facturx_invoice_counter_v1'
+  ];
+
+  el('btn-export-data').addEventListener('click', () => {
+    if (!hasStorage){
+      showStatus('Stockage du navigateur indisponible dans cet aperçu.', 'err');
+      return;
+    }
+    const payload = { app: 'facturx-generateur', version: 1, exportedAt: new Date().toISOString(), data: {} };
+    FACTURX_STORAGE_KEYS.forEach(k => {
+      const raw = localStorage.getItem(k);
+      if (raw !== null) payload.data[k] = raw;
+    });
+    const json = JSON.stringify(payload, null, 2);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadBlob(new TextEncoder().encode(json), `facturx-donnees-${stamp}.json`, 'application/json');
+    showStatus('Données exportées (profils vendeur/acheteur, logo, compteur de numérotation).', 'ok');
+  });
+
+  el('btn-import-data').addEventListener('click', () => {
+    el('import-file-input').click();
+  });
+
+  el('import-file-input').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!hasStorage){
+      showStatus('Stockage du navigateur indisponible dans cet aperçu.', 'err');
+      return;
+    }
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      if (!payload || typeof payload.data !== 'object') throw new Error('fichier invalide ou non reconnu');
+      let count = 0;
+      FACTURX_STORAGE_KEYS.forEach(k => {
+        if (k in payload.data){
+          localStorage.setItem(k, payload.data[k]);
+          count++;
+        }
+      });
+      if (!count) throw new Error('aucune donnée reconnue dans ce fichier');
+      sellerProfiles.init();
+      buyerProfiles.init();
+      if (!el('i-number').value) el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
+      refresh();
+      showStatus(`Import réussi (${count} jeu(x) de données restaurés).`, 'ok');
+    } catch (err) {
+      showStatus("Erreur d'import : " + err.message, 'err');
+    }
   });
 
   // ---------- Line rows ----------
@@ -1112,6 +1236,7 @@
       const pdfBytes = await buildPDF(lines, totals, xmlString);
       const filename = (el('i-number').value || 'facture').replace(/[^a-z0-9\-_]+/gi, '_') + '.pdf';
       downloadBlob(pdfBytes, filename, 'application/pdf');
+      commitInvoiceNumberIfMatches(el('i-number').value);
       showStatus('PDF Factur-X généré et téléchargé.', 'ok');
       showSeal();
     } catch (e) {
@@ -1151,6 +1276,7 @@
   // Init
   el('i-issue').value = new Date().toISOString().slice(0,10);
   el('i-due').value = addDays(el('i-issue').value, 30);
+  if (!el('i-number').value) el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
   addLineRow({ desig: 'Prestation de service', qty: 1, unit: 'unité', price: 0, vat: 20 });
   sellerProfiles.init();
   buyerProfiles.init();
