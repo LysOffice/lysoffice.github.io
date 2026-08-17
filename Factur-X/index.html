@@ -929,7 +929,7 @@
     if (sellerLogoDataUrl){
       try {
         logoImage = await pdfDoc.embedPng(dataUrlToBytes(sellerLogoDataUrl));
-        const maxW = 90, maxH = 42;
+        const maxW = 90, maxH = 34;
         const natural = logoImage.scale(1);
         const scale = Math.min(maxW / natural.width, maxH / natural.height, 1);
         logoDims = { width: natural.width * scale, height: natural.height * scale };
@@ -937,11 +937,14 @@
     }
 
     // Title
+    const titleSize = 24;
+    const capHeight = titleSize * 0.72; // hauteur approx. des majuscules pour ce corps
     const titleX = logoImage ? marginX + logoDims.width + 14 : marginX;
     if (logoImage){
-      page.drawImage(logoImage, { x: marginX, y: y - logoDims.height + 4, width: logoDims.width, height: logoDims.height });
+      const logoY = y + (capHeight - logoDims.height) / 2;
+      page.drawImage(logoImage, { x: marginX, y: logoY, width: logoDims.width, height: logoDims.height });
     }
-    text('FACTURE', titleX, y, { size: 24, bold: true });
+    text('FACTURE', titleX, y, { size: titleSize, bold: true });
     const invNumber = el('i-number').value || '—';
     rightText(`N° ${invNumber}`, pageW - marginX, y, { size: 10, color: softColor });
     rightText(`Émise le ${toFrDate(el('i-issue').value)}`, pageW - marginX, y - 13, { size: 10, color: softColor });
