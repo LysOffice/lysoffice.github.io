@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Générateur Factur-X</title>
+<style>
+  :root{
+    --ink:#12203f;
+    --ink-soft:#3c4a68;
+    --paper:#fbfaf6;
+    --paper-line:#e4e0d4;
+    --gold:#a6771f;
+    --gold-soft:#f1e6cc;
+    --panel:#ffffff;
+    --border:#d8d3c4;
+    --green:#2f6d4f;
+    --red:#a1332b;
+    --mono:'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --serif:'Fraunces', Georgia, 'Times New Roman', serif;
+    --sans:'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#eeece3;color:var(--ink);font-family:var(--sans);}
+  @font-face{ }
+  body{
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(18,32,63,0.05) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .app{max-width:1280px;margin:0 auto;padding:28px 20px 80px;}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;border-bottom:2px solid var(--ink);padding-bottom:14px;flex-wrap:wrap;}
+  header.top h1{font-family:var(--serif);font-weight:600;font-size:30px;margin:0;letter-spacing:0.2px;}
+  header.top h1 .x{color:var(--gold);}
+  header.top p{margin:4px 0 0;font-size:13px;color:var(--ink-soft);max-width:520px;}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin:0 0 4px;}
+
+  .grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:22px;align-items:start;}
+  @media (max-width:980px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:2px;padding:22px 24px;}
+  .panel + .panel{margin-top:18px;}
+  .panel h2{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+  .panel h2 .num{font-family:var(--mono);font-size:11px;color:var(--gold);border:1px solid var(--gold-soft);background:var(--gold-soft);padding:2px 6px;border-radius:2px;}
+
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;}
+  .field-row.single{grid-template-columns:1fr;}
+  .field-row.triple{grid-template-columns:1fr 1fr 1fr;}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);margin-bottom:4px;font-weight:600;}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:2px;
+    font-family:var(--sans);font-size:13.5px;color:var(--ink);background:#fffefb;
+  }
+  textarea{resize:vertical;min-height:44px;}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
+
+  table.lines{width:100%;border-collapse:collapse;margin-top:6px;}
+  table.lines th{font-size:10.5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);text-align:left;padding:4px 6px;border-bottom:1px solid var(--ink);}
+  table.lines td{padding:5px 6px;vertical-align:top;border-bottom:1px solid var(--paper-line);}
+  table.lines td input,table.lines td select{padding:6px 7px;font-size:13px;}
+  .col-qty,.col-unit,.col-price,.col-vat{width:70px;}
+  .col-total{width:90px;font-family:var(--mono);font-size:12.5px;text-align:right;padding-top:10px;white-space:nowrap;}
+  .col-del{width:30px;text-align:center;}
+  .btn-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;line-height:1;padding:6px;}
+  .btn-del:hover{color:#7a1f1a;}
+
+  .btn{font-family:var(--sans);font-weight:600;font-size:13px;padding:9px 16px;border-radius:2px;cursor:pointer;border:1px solid var(--ink);background:var(--panel);color:var(--ink);}
+  .btn:hover{background:var(--ink);color:#fff;}
+  .btn-add{font-size:12px;padding:6px 12px;margin-top:8px;}
+  .btn-primary{background:var(--ink);color:#fff;font-size:14px;padding:12px 22px;}
+  .btn-primary:hover{background:#0a1730;}
+  .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-ghost{border-color:var(--border);}
+
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px;}
+  .status{font-family:var(--mono);font-size:12px;color:var(--ink-soft);}
+  .status.ok{color:var(--green);}
+  .status.err{color:var(--red);}
+
+  /* Preview */
+  .preview-sticky{position:sticky;top:20px;}
+  .paper{background:#fff;border:1px solid var(--border);box-shadow:0 6px 24px rgba(18,32,63,0.10);padding:34px 32px;font-size:12.5px;min-height:560px;position:relative;}
+  .paper::before{content:"";position:absolute;inset:8px;border:1px solid var(--paper-line);pointer-events:none;}
+  .paper .p-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;}
+  .paper .p-title{font-family:var(--serif);font-size:26px;font-weight:600;letter-spacing:0.5px;}
+  .paper .p-meta{text-align:right;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);line-height:1.6;}
+  .paper .p-parties{display:flex;justify-content:space-between;gap:20px;margin-bottom:22px;}
+  .paper .party{flex:1;}
+  .paper .party .label{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:5px;}
+  .paper .party .name{font-weight:700;margin-bottom:2px;}
+  .paper .party div{color:var(--ink-soft);line-height:1.5;}
+  .paper table.ptable{width:100%;border-collapse:collapse;margin-bottom:18px;}
+  .paper table.ptable th{font-size:9.5px;text-transform:uppercase;letter-spacing:0.4px;text-align:left;padding:5px 4px;border-bottom:1.5px solid var(--ink);color:var(--ink-soft);}
+  .paper table.ptable td{padding:6px 4px;border-bottom:1px solid var(--paper-line);font-size:12px;}
+  .paper table.ptable td.num,.paper table.ptable th.num{text-align:right;font-family:var(--mono);}
+  .paper .totals{margin-left:auto;width:230px;font-family:var(--mono);font-size:12px;}
+  .paper .totals div{display:flex;justify-content:space-between;padding:3px 0;}
+  .paper .totals .grand{border-top:1.5px solid var(--ink);margin-top:4px;padding-top:6px;font-weight:700;font-size:13.5px;}
+  .paper .footnote{margin-top:24px;padding-top:12px;border-top:1px solid var(--paper-line);font-size:10px;color:#8a8474;line-height:1.6;}
+
+  .seal-wrap{display:flex;justify-content:center;margin:18px 0 4px;}
+  .seal{width:118px;height:118px;opacity:0;transform:scale(0.7) rotate(-8deg);transition:opacity 0.5s ease, transform 0.5s cubic-bezier(.34,1.56,.64,1);}
+  .seal.show{opacity:1;transform:scale(1) rotate(-8deg);}
+  .seal text{font-family:var(--mono);font-size:6.6px;letter-spacing:1.6px;fill:var(--gold);}
+  .seal .core{fill:none;stroke:var(--gold);stroke-width:1;}
+  .seal .center-text{font-family:var(--serif);font-weight:700;font-size:13px;fill:var(--ink);text-anchor:middle;}
+  .seal .center-sub{font-family:var(--mono);font-size:6px;fill:var(--ink-soft);text-anchor:middle;letter-spacing:1px;}
+
+  .hint{font-size:11.5px;color:var(--ink-soft);line-height:1.6;margin-top:6px;}
+  .note-box{background:var(--gold-soft);border:1px solid #e2cf9c;border-radius:2px;padding:12px 14px;font-size:12px;color:#5a4419;line-height:1.6;margin-top:16px;}
+  .note-box b{color:#3f2e0f;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div>
+      <p class="eyebrow">Facturation électronique · France 2026</p>
+      <h1>Générateur Factur<span class="x">-X</span></h1>
+      <p>Crée un PDF avec fichier XML structuré (CII, profil BASIC) intégré — le format hybride exigé par la réforme B2B. Tout se passe dans le navigateur, rien n'est envoyé sur un serveur.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- FORM COLUMN -->
+    <div>
+      <div class="panel">
+        <h2><span class="num">01</span> Émetteur (vendeur)</h2>
+
+        <div class="field-row" style="align-items:flex-end;">
+          <div>
+            <label for="s-profile-select">Profil enregistré</label>
+            <select id="s-profile-select"><option value="">— Nouveau —</option></select>
+          </div>
+          <div style="display:flex;gap:6px;align-items:flex-end;">
+            <div style="flex:1;">
+              <label for="s-profile-name">Nom du profil</label>
+              <input id="s-profile-name" type="text" placeholder="Ex. LC Logement">
+            </div>
+            <button class="btn btn-ghost" id="btn-save-profile" type="button" title="Enregistrer sous ce nom">Enregistrer</button>
+            <button class="btn btn-ghost" id="btn-delete-profile" type="button" title="Supprimer ce profil" style="padding:9px 11px;">🗑</button>
+          </div>
+        </div>
+        <p class="hint" id="profile-hint" style="margin-top:-2px;margin-bottom:10px;"></p>
+
+        <div class="field-row single">
+          <div>
+            <label for="s-logo">Logo (optionnel)</label>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <input id="s-logo" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="max-width:220px;">
+              <img id="s-logo-preview" alt="Logo" style="display:none;max-height:42px;max-width:130px;border:1px solid var(--border);border-radius:2px;padding:3px;background:#fff;">
+              <button class="btn btn-ghost" id="btn-remove-logo" type="button" style="display:none;padding:6px 10px;font-size:12px;">Retirer le logo</button>
+            </div>
+            <p class="hint" style="margin-top:4px;">Le logo est enregistré avec le profil vendeur (redimensionné automatiquement).</p>
+          </div>
+        </div>
+
+        <div class="field-row single">
+          <div><label for="s-name">Raison sociale</label><input id="s-name" type="text" placeholder="LC Logement SA"></div>
+        </div>
+        <div class="field-row single">
+          <div><label for="s-addr">Adresse</label><input id="s-addr" type="text" placeholder="12 rue des Tanneurs"></div>
+        </div>
+        <div class="field-row triple">
+          <div><label for="s-postal">Code postal</label><input id="s-postal" type="text" placeholder="41000"></div>
+          <div><label for="s-city">Ville</label><input id="s-city" type="text" placeholder="Blois"></div>
+          <div><label for="s-country">Pays (ISO)</label><input id="s-country" type="text" value="FR" maxlength="2"></div>
+        </div>
+        <div class="field-row triple">
+          <div><label for="s-siren">SIREN</label><input id="s-siren" type="text" placeholder="123456789" maxlength="9"></div>
+          <div><label for="s-siret">SIRET</label><input id="s-siret" type="text" placeholder="12345678900012" maxlength="14"></div>
+          <div><label for="s-tva">N° TVA intracom.</label><input id="s-tva" type="text" placeholder="FR12123456789"></div>
+        </div>
+        <div class="field-row single">
+          <div><label for="s-legal">Forme juridique / RCS</label><input id="s-legal" type="text" placeholder="SA au capital de ... € — RCS Blois 123 456 789"></div>
+        </div>
+        <div class="field-row">
+          <div><label for="s-iban">IBAN</label><input id="s-iban" type="text" placeholder="FR76 1234 5678 9012 3456 7890 123"></div>
+          <div><label for="s-bic">BIC</label><input id="s-bic" type="text" placeholder="AGRIFRPP"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="num">02</span> Destinataire (acheteur)</h2>
+
+        <div class="field-row" style="align-items:flex-end;">
+          <div>
+            <label for="b-profile-select">Profil enregistré</label>
+            <select id="b-profile-select"><option value="">— Nouveau —</option></select>
+          </div>
+          <div style="display:flex;gap:6px;align-items:flex-end;">
+            <div style="flex:1;">
+              <label for="b-profile-name">Nom du profil</label>
+              <input id="b-profile-name" type="text" placeholder="Ex. Client SARL">
+            </div>
+            <button class="btn btn-ghost" id="btn-save-buyer-profile" type="button" title="Enregistrer sous ce nom">Enregistrer</button>
+            <button class="btn btn-ghost" id="btn-delete-buyer-profile" type="button" title="Supprimer ce profil" style="padding:9px 11px;">🗑</button>
+          </div>
+        </div>
+        <p class="hint" id="buyer-profile-hint" style="margin-top:-2px;margin-bottom:10px;"></p>
+
+        <div class="field-row single">
+          <div><label for="b-name">Raison sociale / Nom</label><input id="b-name" type="text" placeholder="Client SARL"></div>
+        </div>
+        <div class="field-row single">
+          <div><label for="b-addr">Adresse</label><input id="b-addr" type="text" placeholder="4 avenue du Maine"></div>
+        </div>
+        <div class="field-row triple">
+          <div><label for="b-postal">Code postal</label><input id="b-postal" type="text" placeholder="41200"></div>
+          <div><label for="b-city">Ville</label><input id="b-city" type="text" placeholder="Romorantin-Lanthenay"></div>
+          <div><label for="b-country">Pays (ISO)</label><input id="b-country" type="text" value="FR" maxlength="2"></div>
+        </div>
+        <div class="field-row">
+          <div><label for="b-siret">SIRET</label><input id="b-siret" type="text" placeholder="98765432100010" maxlength="14"></div>
+          <div><label for="b-tva">N° TVA intracom.</label><input id="b-tva" type="text" placeholder="FR98987654321"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="num">03</span> Facture</h2>
+        <div class="field-row triple">
+          <div><label for="i-number">Numéro</label><input id="i-number" type="text" placeholder="FA-2026-0001"></div>
+          <div><label for="i-issue">Date d'émission</label><input id="i-issue" type="date"></div>
+          <div><label for="i-due">Date d'échéance</label><input id="i-due" type="date"></div>
+        </div>
+        <div class="field-row">
+          <div><label for="i-buyerref">Référence acheteur (BT-10)</label><input id="i-buyerref" type="text" placeholder="Code service"></div>
+          <div><label for="i-orderref">Référence de commande (BT-13)</label><input id="i-orderref" type="text" placeholder="N° de bon de commande, n° d'engagement"></div>
+        </div>
+        <div class="field-row">
+          <div><label for="i-terms">Conditions de paiement</label><input id="i-terms" type="text" placeholder="Paiement à 30 jours"></div>
+          <div>
+            <label for="i-means">Moyen de paiement</label>
+            <select id="i-means">
+              <option value="30">Virement bancaire</option>
+              <option value="42">Virement compte spécifique</option>
+              <option value="20">Chèque</option>
+              <option value="10">Espèces</option>
+              <option value="49">Prélèvement</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row single">
+          <div><label for="i-notes">Notes / mentions complémentaires</label><textarea id="i-notes" placeholder="TVA non applicable, art. 293 B du CGI (le cas échéant)…"></textarea></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="num">04</span> Lignes de facturation</h2>
+        <table class="lines">
+          <thead>
+            <tr>
+              <th>Désignation</th>
+              <th class="col-qty">Qté</th>
+              <th class="col-unit">Unité</th>
+              <th class="col-price">Prix U. HT</th>
+              <th class="col-vat">TVA %</th>
+              <th class="col-total">Total HT</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="lines-body"></tbody>
+        </table>
+        <button class="btn btn-add btn-ghost" id="btn-add-line" type="button">+ Ajouter une ligne</button>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-generate" type="button">Générer le PDF Factur-X</button>
+        <button class="btn btn-ghost" id="btn-xml-only" type="button">Télécharger le XML seul</button>
+        <span class="status" id="status"></span>
+      </div>
+
+      <div class="note-box">
+        <b>Portée technique.</b> Le XML généré suit la structure CII (Cross Industry Invoice) du profil Factur-X <b>BASIC</b> — en-tête, parties, lignes, ventilation de TVA, totaux. Le PDF produit est un PDF standard dans lequel ce XML est joint en pièce attachée, conformément au principe Factur-X. La conformité stricte <b>PDF/A-3</b> (profil colorimétrique ICC, métadonnées XMP complètes) n'est pas garantie côté navigateur : avant tout envoi via une plateforme (Chorus Pro, PDP…), valide le fichier avec un outil officiel (ex. Mustang Project, FNFE-MPE).
+      </div>
+    </div>
+
+    <!-- PREVIEW COLUMN -->
+    <div class="preview-sticky">
+      <div class="paper" id="paper">
+        <div class="p-head">
+          <div>
+            <div class="p-title">FACTURE</div>
+          </div>
+          <div class="p-meta" id="p-meta">
+            N° —<br>Émise le —<br>Échéance —
+          </div>
+        </div>
+        <div class="p-parties">
+          <div class="party">
+            <div class="label">Émetteur</div>
+            <img id="pv-s-logo" alt="" style="display:none;max-height:38px;max-width:150px;margin-bottom:6px;">
+            <div class="name" id="pv-s-name">—</div>
+            <div id="pv-s-rest"></div>
+          </div>
+          <div class="party">
+            <div class="label">Destinataire</div>
+            <div class="name" id="pv-b-name">—</div>
+            <div id="pv-b-rest"></div>
+          </div>
+        </div>
+        <table class="ptable">
+          <thead>
+            <tr><th>Désignation</th><th class="num">Qté</th><th class="num">P.U. HT</th><th class="num">TVA</th><th class="num">Total HT</th></tr>
+          </thead>
+          <tbody id="pv-lines"></tbody>
+        </table>
+        <div class="totals" id="pv-totals"></div>
+        <div class="footnote" id="pv-footnote"></div>
+      </div>
+      <div class="seal-wrap">
+        <svg class="seal" id="seal" viewBox="0 0 140 140">
+          <circle class="core" cx="70" cy="70" r="60"/>
+          <circle class="core" cx="70" cy="70" r="50"/>
+          <path id="seal-arc-top" d="M 20,70 A 50,50 0 0 1 120,70" fill="none"/>
+          <path id="seal-arc-bottom" d="M 120,72 A 50,50 0 0 1 20,72" fill="none"/>
+          <text><textPath href="#seal-arc-top" startOffset="50%" text-anchor="middle">FACTUR-X · CONFORME</textPath></text>
+          <text><textPath href="#seal-arc-bottom" startOffset="50%" text-anchor="middle">PROFIL BASIC · EN 16931</textPath></text>
+          <text class="center-text" x="70" y="66">FX</text>
+          <text class="center-sub" x="70" y="80" id="seal-date">—</text>
+        </svg>
+      </div>
+      <p class="hint" style="text-align:center;">Le cachet s'anime une fois le PDF généré avec succès.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ---------- State ----------
+  let lineSeq = 0;
+  const state = {
+    lines: []
+  };
+
+  function uid(){ return 'l' + (++lineSeq); }
+
+  function el(id){ return document.getElementById(id); }
+
+  function esc(str){
+    return String(str == null ? '' : str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  }
+
+  function fmtMoney(n){
+    if (isNaN(n)) n = 0;
+    return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function fmtXmlDecimal(n){
+    if (isNaN(n)) n = 0;
+    return n.toFixed(2);
+  }
+
+  function toYYYYMMDD(dateStr){
+    if (!dateStr) return '';
+    return dateStr.replace(/-/g,'');
+  }
+
+  function toFrDate(dateStr){
+    if (!dateStr) return '—';
+    const [y,m,d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  // ---------- Logo vendeur ----------
+  let sellerLogoDataUrl = null; // toujours une dataURL PNG après redimensionnement
+
+  function readFileAsDataURL(file){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  function resizeImageDataUrl(dataUrl, maxDim){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        if (!w || !h){ reject(new Error('Image invalide')); return; }
+        if (w > maxDim || h > maxDim){
+          const scale = maxDim / Math.max(w, h);
+          w = Math.max(1, Math.round(w * scale));
+          h = Math.max(1, Math.round(h * scale));
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => reject(new Error('Impossible de lire cette image'));
+      img.src = dataUrl;
+    });
+  }
+
+  function dataUrlToBytes(dataUrl){
+    const base64 = dataUrl.split(',')[1] || '';
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  function setSellerLogo(dataUrl){
+    sellerLogoDataUrl = dataUrl || null;
+    const img = el('s-logo-preview');
+    const removeBtn = el('btn-remove-logo');
+    if (sellerLogoDataUrl){
+      img.src = sellerLogoDataUrl;
+      img.style.display = 'inline-block';
+      removeBtn.style.display = 'inline-block';
+    } else {
+      img.src = '';
+      img.style.display = 'none';
+      removeBtn.style.display = 'none';
+    }
+    refresh();
+  }
+
+  el('s-logo').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const rawDataUrl = await readFileAsDataURL(file);
+      const resized = await resizeImageDataUrl(rawDataUrl, 300);
+      setSellerLogo(resized);
+      showStatus('Logo chargé — enregistre le profil vendeur pour le conserver.', 'ok');
+    } catch (err) {
+      showStatus('Impossible de charger cette image : ' + err.message, 'err');
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  el('btn-remove-logo').addEventListener('click', () => {
+    setSellerLogo(null);
+  });
+
+  // ---------- Profils (localStorage) : fabrique générique vendeur / acheteur ----------
+  function storageAvailable(){
+    try {
+      const k = '__facturx_test__';
+      localStorage.setItem(k, '1');
+      localStorage.removeItem(k);
+      return true;
+    } catch (e) { return false; }
+  }
+  const hasStorage = storageAvailable();
+
+  function createProfileManager(cfg){
+    // cfg: { storageKey, lastKey, fieldIds, selectId, nameId, saveBtnId, deleteBtnId, hintId, label }
+    function loadProfiles(){
+      if (!hasStorage) return {};
+      try { return JSON.parse(localStorage.getItem(cfg.storageKey) || '{}'); }
+      catch (e) { return {}; }
+    }
+    function saveProfilesToStorage(profiles){
+      if (!hasStorage) return;
+      try { localStorage.setItem(cfg.storageKey, JSON.stringify(profiles)); } catch (e) {}
+    }
+    function setLastProfile(name){
+      if (!hasStorage) return;
+      try { localStorage.setItem(cfg.lastKey, name || ''); } catch (e) {}
+    }
+    function getLastProfile(){
+      if (!hasStorage) return '';
+      try { return localStorage.getItem(cfg.lastKey) || ''; } catch (e) { return ''; }
+    }
+    function snapshot(){
+      const data = {};
+      cfg.fieldIds.forEach(id => { data[id] = el(id).value; });
+      if (cfg.extraGet) Object.assign(data, cfg.extraGet());
+      return data;
+    }
+    function applySnapshot(data){
+      if (!data) return;
+      cfg.fieldIds.forEach(id => { if (id in data) el(id).value = data[id]; });
+      if (cfg.extraApply) cfg.extraApply(data);
+    }
+    function refreshSelect(selectedName){
+      const profiles = loadProfiles();
+      const select = el(cfg.selectId);
+      const names = Object.keys(profiles).sort((a,b) => a.localeCompare(b, 'fr'));
+      select.innerHTML = '<option value="">— Nouveau —</option>' +
+        names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      if (selectedName && names.includes(selectedName)) select.value = selectedName;
+      return profiles;
+    }
+    function init(){
+      const hint = el(cfg.hintId);
+      if (!hasStorage){
+        hint.textContent = "Stockage du navigateur indisponible dans cet aperçu — ouvre le fichier .html téléchargé directement dans ton navigateur pour activer les profils enregistrés.";
+        el(cfg.saveBtnId).disabled = true;
+        el(cfg.deleteBtnId).disabled = true;
+        el(cfg.selectId).disabled = true;
+        return;
+      }
+      const lastName = getLastProfile();
+      const profiles = refreshSelect(lastName);
+      if (lastName && profiles[lastName]){
+        applySnapshot(profiles[lastName]);
+        el(cfg.nameId).value = lastName;
+      }
+    }
+
+    el(cfg.saveBtnId).addEventListener('click', () => {
+      const name = el(cfg.nameId).value.trim();
+      if (!name){
+        showStatus('Indique un nom de profil avant d\u2019enregistrer.', 'err');
+        return;
+      }
+      const profiles = loadProfiles();
+      const existed = Object.prototype.hasOwnProperty.call(profiles, name);
+      profiles[name] = snapshot();
+      saveProfilesToStorage(profiles);
+      setLastProfile(name);
+      refreshSelect(name);
+      showStatus(existed ? `Profil ${cfg.label} « ${name} » mis à jour.` : `Profil ${cfg.label} « ${name} » enregistré.`, 'ok');
+    });
+
+    el(cfg.selectId).addEventListener('change', () => {
+      const name = el(cfg.selectId).value;
+      if (!name){
+        el(cfg.nameId).value = '';
+        return;
+      }
+      const profiles = loadProfiles();
+      if (profiles[name]){
+        applySnapshot(profiles[name]);
+        el(cfg.nameId).value = name;
+        setLastProfile(name);
+        refresh();
+        showStatus(`Profil ${cfg.label} « ${name} » chargé.`, 'ok');
+      }
+    });
+
+    el(cfg.deleteBtnId).addEventListener('click', () => {
+      const name = el(cfg.selectId).value || el(cfg.nameId).value.trim();
+      if (!name){
+        showStatus('Sélectionne un profil à supprimer.', 'err');
+        return;
+      }
+      const profiles = loadProfiles();
+      if (!profiles[name]){
+        showStatus(`Aucun profil ${cfg.label} « ${name} » enregistré.`, 'err');
+        return;
+      }
+      delete profiles[name];
+      saveProfilesToStorage(profiles);
+      if (getLastProfile() === name) setLastProfile('');
+      refreshSelect('');
+      el(cfg.nameId).value = '';
+      showStatus(`Profil ${cfg.label} « ${name} » supprimé.`, 'ok');
+    });
+
+    return { init };
+  }
+
+  const sellerProfiles = createProfileManager({
+    storageKey: 'facturx_seller_profiles_v1',
+    lastKey: 'facturx_last_seller_profile_v1',
+    fieldIds: ['s-name','s-addr','s-postal','s-city','s-country','s-siren','s-siret','s-tva','s-legal','s-iban','s-bic'],
+    selectId: 's-profile-select',
+    nameId: 's-profile-name',
+    saveBtnId: 'btn-save-profile',
+    deleteBtnId: 'btn-delete-profile',
+    hintId: 'profile-hint',
+    label: 'vendeur',
+    extraGet: () => ({ logo: sellerLogoDataUrl || null }),
+    extraApply: (data) => { setSellerLogo(data.logo || null); }
+  });
+
+  const buyerProfiles = createProfileManager({
+    storageKey: 'facturx_buyer_profiles_v1',
+    lastKey: 'facturx_last_buyer_profile_v1',
+    fieldIds: ['b-name','b-addr','b-postal','b-city','b-country','b-siret','b-tva'],
+    selectId: 'b-profile-select',
+    nameId: 'b-profile-name',
+    saveBtnId: 'btn-save-buyer-profile',
+    deleteBtnId: 'btn-delete-buyer-profile',
+    hintId: 'buyer-profile-hint',
+    label: 'acheteur'
+  });
+
+  // ---------- Line rows ----------
+  const linesBody = el('lines-body');
+
+  function addLineRow(prefill){
+    const id = uid();
+    const tr = document.createElement('tr');
+    tr.dataset.id = id;
+    tr.innerHTML = `
+      <td><input type="text" class="ln-desig" placeholder="Prestation, article…"></td>
+      <td class="col-qty"><input type="number" class="ln-qty" value="1" step="0.01" min="0"></td>
+      <td class="col-unit">
+        <select class="ln-unit">
+          <option value="unité">unité</option>
+          <option value="heure">heure</option>
+          <option value="jour">jour</option>
+          <option value="kg">kg</option>
+          <option value="m2">m²</option>
+          <option value="forfait">forfait</option>
+        </select>
+      </td>
+      <td class="col-price"><input type="number" class="ln-price" value="0" step="0.01" min="0"></td>
+      <td class="col-vat">
+        <select class="ln-vat">
+          <option value="20">20</option>
+          <option value="10">10</option>
+          <option value="5.5">5,5</option>
+          <option value="2.1">2,1</option>
+          <option value="0">0</option>
+        </select>
+      </td>
+      <td class="col-total"><span class="ln-total">0,00 €</span></td>
+      <td class="col-del"><button class="btn-del" type="button" title="Supprimer la ligne">✕</button></td>
+    `;
+    linesBody.appendChild(tr);
+
+    const inputs = tr.querySelectorAll('input, select');
+    inputs.forEach(inp => inp.addEventListener('input', refresh));
+    tr.querySelector('.btn-del').addEventListener('click', () => {
+      tr.remove();
+      refresh();
+    });
+
+    if (prefill){
+      tr.querySelector('.ln-desig').value = prefill.desig || '';
+      tr.querySelector('.ln-qty').value = prefill.qty != null ? prefill.qty : 1;
+      tr.querySelector('.ln-unit').value = prefill.unit || 'unité';
+      tr.querySelector('.ln-price').value = prefill.price != null ? prefill.price : 0;
+      tr.querySelector('.ln-vat').value = prefill.vat != null ? prefill.vat : 20;
+    }
+  }
+
+  function readLines(){
+    const rows = Array.from(linesBody.querySelectorAll('tr'));
+    return rows.map(tr => {
+      const qty = parseFloat(tr.querySelector('.ln-qty').value) || 0;
+      const price = parseFloat(tr.querySelector('.ln-price').value) || 0;
+      return {
+        designation: tr.querySelector('.ln-desig').value.trim(),
+        quantity: qty,
+        unit: tr.querySelector('.ln-unit').value,
+        unitPrice: price,
+        vatRate: parseFloat(tr.querySelector('.ln-vat').value) || 0,
+        totalEl: tr.querySelector('.ln-total')
+      };
+    });
+  }
+
+  // ---------- Totals ----------
+  function computeTotals(lines){
+    let totalHT = 0;
+    const byRate = {};
+    lines.forEach(l => {
+      const lineHT = l.quantity * l.unitPrice;
+      totalHT += lineHT;
+      byRate[l.vatRate] = (byRate[l.vatRate] || 0) + lineHT;
+      if (l.totalEl) l.totalEl.textContent = fmtMoney(lineHT) + ' €';
+    });
+    const vatBreakdown = Object.keys(byRate).map(rate => {
+      const baseHT = byRate[rate];
+      const r = parseFloat(rate);
+      const vatAmount = baseHT * r / 100;
+      return { rate: r, baseHT, vatAmount };
+    }).sort((a,b)=>b.rate-a.rate);
+    const totalVAT = vatBreakdown.reduce((s,t)=>s+t.vatAmount,0);
+    const totalTTC = totalHT + totalVAT;
+    return { totalHT, totalVAT, totalTTC, vatBreakdown };
+  }
+
+  // ---------- Preview ----------
+  function refresh(){
+    const lines = readLines();
+    const totals = computeTotals(lines);
+
+    el('p-meta').innerHTML =
+      `N° ${esc(el('i-number').value) || '—'}<br>` +
+      `Émise le ${toFrDate(el('i-issue').value)}<br>` +
+      `Échéance ${toFrDate(el('i-due').value)}` +
+      (el('i-buyerref').value ? `<br>Réf. acheteur : ${esc(el('i-buyerref').value)}` : '') +
+      (el('i-orderref').value ? `<br>Commande : ${esc(el('i-orderref').value)}` : '');
+
+    el('pv-s-name').textContent = el('s-name').value || '—';
+    const pvLogo = el('pv-s-logo');
+    if (sellerLogoDataUrl){
+      pvLogo.src = sellerLogoDataUrl;
+      pvLogo.style.display = 'block';
+    } else {
+      pvLogo.style.display = 'none';
+    }
+    el('pv-s-rest').innerHTML = [
+      el('s-addr').value,
+      [el('s-postal').value, el('s-city').value].filter(Boolean).join(' '),
+      el('s-tva').value ? 'TVA : ' + el('s-tva').value : '',
+      el('s-siret').value ? 'SIRET : ' + el('s-siret').value : ''
+    ].filter(Boolean).join('<br>');
+
+    el('pv-b-name').textContent = el('b-name').value || '—';
+    el('pv-b-rest').innerHTML = [
+      el('b-addr').value,
+      [el('b-postal').value, el('b-city').value].filter(Boolean).join(' '),
+      el('b-tva').value ? 'TVA : ' + el('b-tva').value : ''
+    ].filter(Boolean).join('<br>');
+
+    const linesHtml = lines.map(l => `
+      <tr>
+        <td>${esc(l.designation) || '—'}</td>
+        <td class="num">${l.quantity} ${esc(l.unit)}</td>
+        <td class="num">${fmtMoney(l.unitPrice)} €</td>
+        <td class="num">${l.vatRate}%</td>
+        <td class="num">${fmtMoney(l.quantity * l.unitPrice)} €</td>
+      </tr>`).join('');
+    el('pv-lines').innerHTML = linesHtml || `<tr><td colspan="5" style="color:#999;">Aucune ligne</td></tr>`;
+
+    const vatLines = totals.vatBreakdown.map(t =>
+      `<div><span>dont TVA ${t.rate}%</span><span>${fmtMoney(t.vatAmount)} €</span></div>`
+    ).join('');
+    el('pv-totals').innerHTML = `
+      <div><span>Total HT</span><span>${fmtMoney(totals.totalHT)} €</span></div>
+      ${vatLines}
+      <div><span>Total TVA</span><span>${fmtMoney(totals.totalVAT)} €</span></div>
+      <div class="grand"><span>Total TTC</span><span>${fmtMoney(totals.totalTTC)} €</span></div>
+    `;
+
+    el('pv-footnote').innerHTML = [
+      el('s-legal').value,
+      el('i-terms').value ? 'Conditions de paiement : ' + esc(el('i-terms').value) : '',
+      el('s-iban').value ? 'IBAN : ' + esc(el('s-iban').value) + (el('s-bic').value ? ' — BIC : ' + esc(el('s-bic').value) : '') : '',
+      el('i-notes').value
+    ].filter(Boolean).join('<br>');
+
+    return { lines, totals };
+  }
+
+  // ---------- XML (Factur-X CII, profil BASIC) ----------
+  function buildXML(lines, totals){
+    const invNumber = el('i-number').value || 'SANS-NUMERO';
+    const issueDate = el('i-issue').value;
+    const dueDate = el('i-due').value;
+    const currency = 'EUR';
+
+    const sName = el('s-name').value, sAddr = el('s-addr').value, sPostal = el('s-postal').value,
+          sCity = el('s-city').value, sCountry = el('s-country').value || 'FR',
+          sSiren = el('s-siren').value, sTva = el('s-tva').value;
+    const bName = el('b-name').value, bAddr = el('b-addr').value, bPostal = el('b-postal').value,
+          bCity = el('b-city').value, bCountry = el('b-country').value || 'FR', bTva = el('b-tva').value;
+
+    const lineItemsXml = lines.map((l, i) => {
+      const cat = l.vatRate === 0 ? 'Z' : 'S';
+      const unitCode = l.unit === 'heure' ? 'HUR' : (l.unit === 'kg' ? 'KGM' : (l.unit === 'm2' ? 'MTK' : 'C62'));
+      return `
+    <ram:IncludedSupplyChainTradeLineItem>
+      <ram:AssociatedDocumentLineDocument>
+        <ram:LineID>${i + 1}</ram:LineID>
+      </ram:AssociatedDocumentLineDocument>
+      <ram:SpecifiedTradeProduct>
+        <ram:Name>${esc(l.designation || 'Article')}</ram:Name>
+      </ram:SpecifiedTradeProduct>
+      <ram:SpecifiedLineTradeAgreement>
+        <ram:NetPriceProductTradePrice>
+          <ram:ChargeAmount>${fmtXmlDecimal(l.unitPrice)}</ram:ChargeAmount>
+        </ram:NetPriceProductTradePrice>
+      </ram:SpecifiedLineTradeAgreement>
+      <ram:SpecifiedLineTradeDelivery>
+        <ram:BilledQuantity unitCode="${unitCode}">${l.quantity}</ram:BilledQuantity>
+      </ram:SpecifiedLineTradeDelivery>
+      <ram:SpecifiedLineTradeSettlement>
+        <ram:ApplicableTradeTax>
+          <ram:TypeCode>VAT</ram:TypeCode>
+          <ram:CategoryCode>${cat}</ram:CategoryCode>
+          <ram:RateApplicablePercent>${l.vatRate}</ram:RateApplicablePercent>
+        </ram:ApplicableTradeTax>
+        <ram:SpecifiedTradeSettlementLineMonetarySummation>
+          <ram:LineTotalAmount>${fmtXmlDecimal(l.quantity * l.unitPrice)}</ram:LineTotalAmount>
+        </ram:SpecifiedTradeSettlementLineMonetarySummation>
+      </ram:SpecifiedLineTradeSettlement>
+    </ram:IncludedSupplyChainTradeLineItem>`;
+    }).join('');
+
+    const taxBreakdownXml = totals.vatBreakdown.map(t => {
+      const cat = t.rate === 0 ? 'Z' : 'S';
+      return `
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>${fmtXmlDecimal(t.vatAmount)}</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        <ram:BasisAmount>${fmtXmlDecimal(t.baseHT)}</ram:BasisAmount>
+        <ram:CategoryCode>${cat}</ram:CategoryCode>
+        <ram:RateApplicablePercent>${t.rate}</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>`;
+    }).join('');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn:factur-x.eu:1p0:basic</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocument>
+    <ram:ID>${esc(invNumber)}</ram:ID>
+    <ram:TypeCode>380</ram:TypeCode>
+    <ram:IssueDateTime>
+      <udt:DateTimeString format="102">${toYYYYMMDD(issueDate)}</udt:DateTimeString>
+    </ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>${lineItemsXml}
+    <ram:ApplicableHeaderTradeAgreement>
+      ${el('i-buyerref').value ? `<ram:BuyerReference>${esc(el('i-buyerref').value)}</ram:BuyerReference>` : ''}
+      <ram:SellerTradeParty>
+        <ram:Name>${esc(sName || 'Émetteur')}</ram:Name>
+        ${sSiren ? `<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${esc(sSiren)}</ram:ID></ram:SpecifiedLegalOrganization>` : ''}
+        <ram:PostalTradeAddress>
+          <ram:PostcodeCode>${esc(sPostal)}</ram:PostcodeCode>
+          <ram:LineOne>${esc(sAddr)}</ram:LineOne>
+          <ram:CityName>${esc(sCity)}</ram:CityName>
+          <ram:CountryID>${esc(sCountry)}</ram:CountryID>
+        </ram:PostalTradeAddress>
+        ${sTva ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${esc(sTva)}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}
+      </ram:SellerTradeParty>
+      <ram:BuyerTradeParty>
+        <ram:Name>${esc(bName || 'Destinataire')}</ram:Name>
+        <ram:PostalTradeAddress>
+          <ram:PostcodeCode>${esc(bPostal)}</ram:PostcodeCode>
+          <ram:LineOne>${esc(bAddr)}</ram:LineOne>
+          <ram:CityName>${esc(bCity)}</ram:CityName>
+          <ram:CountryID>${esc(bCountry)}</ram:CountryID>
+        </ram:PostalTradeAddress>
+        ${bTva ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${esc(bTva)}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}
+      </ram:BuyerTradeParty>
+      ${el('i-orderref').value ? `<ram:BuyerOrderReferencedDocument><ram:IssuerAssignedID>${esc(el('i-orderref').value)}</ram:IssuerAssignedID></ram:BuyerOrderReferencedDocument>` : ''}
+    </ram:ApplicableHeaderTradeAgreement>
+    <ram:ApplicableHeaderTradeDelivery/>
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>${taxBreakdownXml}
+      <ram:SpecifiedTradePaymentTerms>
+        <ram:Description>${esc(el('i-terms').value || '')}</ram:Description>
+        ${dueDate ? `<ram:DueDateDateTime><udt:DateTimeString format="102">${toYYYYMMDD(dueDate)}</udt:DateTimeString></ram:DueDateDateTime>` : ''}
+      </ram:SpecifiedTradePaymentTerms>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount>${fmtXmlDecimal(totals.totalHT)}</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>${fmtXmlDecimal(totals.totalHT)}</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount currencyID="${currency}">${fmtXmlDecimal(totals.totalVAT)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>${fmtXmlDecimal(totals.totalTTC)}</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>${fmtXmlDecimal(totals.totalTTC)}</ram:DuePayableAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>`;
+  }
+
+  // ---------- PDF drawing ----------
+  function wrapText(text, font, size, maxWidth){
+    const words = String(text || '').split(/\s+/).filter(Boolean);
+    const lines = [];
+    let cur = '';
+    words.forEach(w => {
+      const test = cur ? cur + ' ' + w : w;
+      if (font.widthOfTextAtSize(test, size) > maxWidth && cur){
+        lines.push(cur);
+        cur = w;
+      } else {
+        cur = test;
+      }
+    });
+    if (cur) lines.push(cur);
+    return lines.length ? lines : [''];
+  }
+
+  async function buildPDF(lines, totals, xmlString){
+    const { PDFDocument, StandardFonts, rgb, AFRelationship } = PDFLib;
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.setTitle(`Facture ${el('i-number').value || ''}`.trim());
+    pdfDoc.setSubject('Facture électronique Factur-X');
+    pdfDoc.setProducer('Générateur Factur-X (facture-electronique)');
+    pdfDoc.setCreator('Générateur Factur-X (facture-electronique)');
+
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const inkColor = rgb(0.07, 0.125, 0.247);
+    const softColor = rgb(0.30, 0.34, 0.42);
+    const goldColor = rgb(0.65, 0.47, 0.12);
+    const lineColor = rgb(0.85, 0.83, 0.78);
+
+    const pageW = 595.28, pageH = 841.89;
+    const marginX = 50;
+    let page = pdfDoc.addPage([pageW, pageH]);
+    let y = pageH - 56;
+
+    function newPage(){
+      page = pdfDoc.addPage([pageW, pageH]);
+      y = pageH - 56;
+    }
+    function ensureSpace(h){
+      if (y - h < 80) newPage();
+    }
+    function text(t, x, yy, opts){
+      opts = opts || {};
+      page.drawText(String(t == null ? '' : t), {
+        x, y: yy,
+        size: opts.size || 10,
+        font: opts.bold ? fontBold : font,
+        color: opts.color || inkColor
+      });
+    }
+    function rightText(t, xRight, yy, opts){
+      opts = opts || {};
+      const size = opts.size || 10;
+      const f = opts.bold ? fontBold : font;
+      const w = f.widthOfTextAtSize(String(t), size);
+      text(t, xRight - w, yy, opts);
+    }
+    function hr(yy, x1, x2, color, thickness){
+      page.drawLine({ start:{x:x1,y:yy}, end:{x:x2,y:yy}, thickness: thickness||0.75, color: color||lineColor });
+    }
+
+    // Logo vendeur (optionnel)
+    let logoImage = null, logoDims = null;
+    if (sellerLogoDataUrl){
+      try {
+        logoImage = await pdfDoc.embedPng(dataUrlToBytes(sellerLogoDataUrl));
+        const maxW = 90, maxH = 42;
+        const natural = logoImage.scale(1);
+        const scale = Math.min(maxW / natural.width, maxH / natural.height, 1);
+        logoDims = { width: natural.width * scale, height: natural.height * scale };
+      } catch (e) { console.warn('Logo non intégré :', e); }
+    }
+
+    // Title
+    const titleX = logoImage ? marginX + logoDims.width + 14 : marginX;
+    if (logoImage){
+      page.drawImage(logoImage, { x: marginX, y: y - logoDims.height + 4, width: logoDims.width, height: logoDims.height });
+    }
+    text('FACTURE', titleX, y, { size: 24, bold: true });
+    const invNumber = el('i-number').value || '—';
+    rightText(`N° ${invNumber}`, pageW - marginX, y, { size: 10, color: softColor });
+    rightText(`Émise le ${toFrDate(el('i-issue').value)}`, pageW - marginX, y - 13, { size: 10, color: softColor });
+    rightText(`Échéance ${toFrDate(el('i-due').value)}`, pageW - marginX, y - 26, { size: 10, color: softColor });
+    let metaY = y - 26;
+    if (el('i-buyerref').value){ metaY -= 13; rightText(`Réf. acheteur : ${el('i-buyerref').value}`, pageW - marginX, metaY, { size: 9, color: softColor }); }
+    if (el('i-orderref').value){ metaY -= 13; rightText(`Commande : ${el('i-orderref').value}`, pageW - marginX, metaY, { size: 9, color: softColor }); }
+    y = Math.min(y - 50, metaY - 14);
+    hr(y, marginX, pageW - marginX, inkColor, 1.2);
+    y -= 22;
+
+    // Parties
+    const colW = (pageW - marginX*2 - 20) / 2;
+    const leftX = marginX, rightX = marginX + colW + 20;
+    let ys = y, yb = y;
+
+    text('ÉMETTEUR', leftX, ys, { size: 8, color: goldColor, bold: true }); ys -= 13;
+    text(el('s-name').value || '—', leftX, ys, { size: 10.5, bold: true }); ys -= 13;
+    [el('s-addr').value, [el('s-postal').value, el('s-city').value].filter(Boolean).join(' '),
+     el('s-tva').value ? 'TVA : ' + el('s-tva').value : '', el('s-siret').value ? 'SIRET : ' + el('s-siret').value : '']
+     .filter(Boolean).forEach(l => { text(l, leftX, ys, { size: 9.5, color: softColor }); ys -= 12; });
+
+    text('DESTINATAIRE', rightX, yb, { size: 8, color: goldColor, bold: true }); yb -= 13;
+    text(el('b-name').value || '—', rightX, yb, { size: 10.5, bold: true }); yb -= 13;
+    [el('b-addr').value, [el('b-postal').value, el('b-city').value].filter(Boolean).join(' '),
+     el('b-tva').value ? 'TVA : ' + el('b-tva').value : '']
+     .filter(Boolean).forEach(l => { text(l, rightX, yb, { size: 9.5, color: softColor }); yb -= 12; });
+
+    y = Math.min(ys, yb) - 20;
+    hr(y, marginX, pageW - marginX, lineColor, 0.75);
+    y -= 18;
+
+    // Table header
+    const cols = { desig: marginX, qty: 320, unit: 360, price: 410, vat: 465, total: pageW - marginX };
+    text('Désignation', cols.desig, y, { size: 8.5, color: softColor, bold: true });
+    text('Qté', cols.qty, y, { size: 8.5, color: softColor, bold: true });
+    text('Unité', cols.unit, y, { size: 8.5, color: softColor, bold: true });
+    rightText('P.U. HT', cols.price + 40, y, { size: 8.5, color: softColor, bold: true });
+    rightText('TVA', cols.vat + 20, y, { size: 8.5, color: softColor, bold: true });
+    rightText('Total HT', cols.total, y, { size: 8.5, color: softColor, bold: true });
+    y -= 6;
+    hr(y, marginX, pageW - marginX, inkColor, 1);
+    y -= 14;
+
+    lines.forEach(l => {
+      const wrapped = wrapText(l.designation || '—', font, 9.5, 260);
+      const rowH = Math.max(14, wrapped.length * 11 + 3);
+      ensureSpace(rowH + 6);
+      let ly = y;
+      wrapped.forEach((wl, idx) => { text(wl, cols.desig, ly - idx*11, { size: 9.5 }); });
+      text(l.quantity, cols.qty, y, { size: 9.5 });
+      text(l.unit, cols.unit, y, { size: 9.5 });
+      rightText(fmtMoney(l.unitPrice) + ' €', cols.price + 40, y, { size: 9.5 });
+      rightText(l.vatRate + '%', cols.vat + 20, y, { size: 9.5 });
+      rightText(fmtMoney(l.quantity * l.unitPrice) + ' €', cols.total, y, { size: 9.5, bold: true });
+      y -= rowH;
+      hr(y + 4, marginX, pageW - marginX, lineColor, 0.5);
+    });
+
+    y -= 10;
+    ensureSpace(120);
+
+    // Totals block
+    const totBoxX = pageW - marginX - 200;
+    text('Total HT', totBoxX, y, { size: 9.5, color: softColor });
+    rightText(fmtMoney(totals.totalHT) + ' €', pageW - marginX, y, { size: 9.5 });
+    y -= 13;
+    totals.vatBreakdown.forEach(t => {
+      text(`dont TVA ${t.rate}%`, totBoxX, y, { size: 9.5, color: softColor });
+      rightText(fmtMoney(t.vatAmount) + ' €', pageW - marginX, y, { size: 9.5 });
+      y -= 13;
+    });
+    text('Total TVA', totBoxX, y, { size: 9.5, color: softColor });
+    rightText(fmtMoney(totals.totalVAT) + ' €', pageW - marginX, y, { size: 9.5 });
+    y -= 15;
+    hr(y + 4, totBoxX, pageW - marginX, inkColor, 1);
+    text('Total TTC', totBoxX, y, { size: 11.5, bold: true });
+    rightText(fmtMoney(totals.totalTTC) + ' €', pageW - marginX, y, { size: 11.5, bold: true });
+    y -= 30;
+
+    ensureSpace(70);
+    hr(y, marginX, pageW - marginX, lineColor, 0.75);
+    y -= 16;
+    const footLines = [
+      el('s-legal').value,
+      el('i-terms').value ? 'Conditions de paiement : ' + el('i-terms').value : '',
+      el('s-iban').value ? 'IBAN : ' + el('s-iban').value + (el('s-bic').value ? '  BIC : ' + el('s-bic').value : '') : '',
+      el('i-notes').value
+    ].filter(Boolean);
+    footLines.forEach(l => {
+      wrapText(l, font, 8.5, pageW - marginX*2).forEach(wl => {
+        text(wl, marginX, y, { size: 8.5, color: softColor });
+        y -= 11;
+      });
+    });
+
+    // Attach the XML — this is what makes the PDF a Factur-X file
+    const xmlBytes = new TextEncoder().encode(xmlString);
+    await pdfDoc.attach(xmlBytes, 'factur-x.xml', {
+      mimeType: 'text/xml',
+      description: 'Factur-X invoice data (CII, profil BASIC)',
+      creationDate: new Date(),
+      modificationDate: new Date(),
+      afRelationship: AFRelationship.Data
+    });
+
+    return await pdfDoc.save();
+  }
+
+  function downloadBlob(bytes, filename, mime){
+    const blob = new Blob([bytes], { type: mime });
+    const urlObj = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = urlObj;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(urlObj), 4000);
+  }
+
+  function validate(lines){
+    const errors = [];
+    if (!el('s-name').value.trim()) errors.push("le nom de l'émetteur");
+    if (!el('b-name').value.trim()) errors.push('le nom du destinataire');
+    if (!el('i-number').value.trim()) errors.push('le numéro de facture');
+    if (!el('i-issue').value) errors.push("la date d'émission");
+    if (!lines.length || lines.every(l => !l.designation && l.unitPrice === 0)) errors.push('au moins une ligne de facturation');
+    return errors;
+  }
+
+  function showStatus(msg, kind){
+    const s = el('status');
+    s.textContent = msg;
+    s.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function showSeal(){
+    const seal = el('seal');
+    el('seal-date').textContent = toFrDate(el('i-issue').value) === '—' ? '' : toFrDate(el('i-issue').value);
+    seal.classList.remove('show');
+    void seal.offsetWidth;
+    seal.classList.add('show');
+  }
+
+  // ---------- Wire up ----------
+  document.querySelectorAll('.panel input, .panel select, .panel textarea').forEach(elm => {
+    elm.addEventListener('input', refresh);
+  });
+
+  el('btn-add-line').addEventListener('click', () => { addLineRow(); refresh(); });
+
+  el('btn-generate').addEventListener('click', async () => {
+    const { lines, totals } = refresh();
+    const errors = validate(lines);
+    if (errors.length){
+      showStatus('Champs manquants : ' + errors.join(', ') + '.', 'err');
+      return;
+    }
+    const btn = el('btn-generate');
+    btn.disabled = true;
+    showStatus('Génération en cours…');
+    try {
+      const xmlString = buildXML(lines, totals);
+      const pdfBytes = await buildPDF(lines, totals, xmlString);
+      const filename = (el('i-number').value || 'facture').replace(/[^a-z0-9\-_]+/gi, '_') + '.pdf';
+      downloadBlob(pdfBytes, filename, 'application/pdf');
+      showStatus('PDF Factur-X généré et téléchargé.', 'ok');
+      showSeal();
+    } catch (e) {
+      console.error(e);
+      showStatus('Erreur pendant la génération : ' + e.message, 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  el('btn-xml-only').addEventListener('click', () => {
+    const { lines, totals } = refresh();
+    const errors = validate(lines);
+    if (errors.length){
+      showStatus('Champs manquants : ' + errors.join(', ') + '.', 'err');
+      return;
+    }
+    const xmlString = buildXML(lines, totals);
+    const filename = (el('i-number').value || 'facture').replace(/[^a-z0-9\-_]+/gi, '_') + '.xml';
+    downloadBlob(new TextEncoder().encode(xmlString), filename, 'text/xml');
+    showStatus('XML téléchargé.', 'ok');
+  });
+
+  // Init
+  el('i-issue').value = new Date().toISOString().slice(0,10);
+  addLineRow({ desig: 'Prestation de service', qty: 1, unit: 'unité', price: 0, vat: 20 });
+  sellerProfiles.init();
+  buyerProfiles.init();
+  refresh();
+
+})();
+</script>
+</body>
+</html>
