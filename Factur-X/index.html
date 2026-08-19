@@ -250,6 +250,7 @@
         </div>
         <div class="field-row">
           <div><label for="i-deliverydate">Date de livraison / d'exécution (BT-72)</label><input id="i-deliverydate" type="date"></div>
+          <p class="hint" style="margin:2px 0 0;">Pré-remplie avec la date d'émission (élément obligatoire dans le XML) — modifiable si différente.</p>
         </div>
         <div class="field-row">
           <div><label for="i-terms">Conditions de paiement</label><input id="i-terms" type="text" placeholder="Paiement à 30 jours"></div>
@@ -982,14 +983,14 @@
         ${bTva ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${esc(bTva)}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}
       </ram:BuyerTradeParty>
       ${el('i-orderref').value ? `<ram:BuyerOrderReferencedDocument><ram:IssuerAssignedID>${esc(el('i-orderref').value)}</ram:IssuerAssignedID></ram:BuyerOrderReferencedDocument>` : ''}
-    </ram:ApplicableHeaderTradeAgreement>${el('i-deliverydate').value ? `
+    </ram:ApplicableHeaderTradeAgreement>
     <ram:ApplicableHeaderTradeDelivery>
       <ram:ActualDeliverySupplyChainEvent>
         <ram:OccurrenceDateTime>
-          <udt:DateTimeString format="102">${toYYYYMMDD(el('i-deliverydate').value)}</udt:DateTimeString>
+          <udt:DateTimeString format="102">${toYYYYMMDD(el('i-deliverydate').value || issueDate)}</udt:DateTimeString>
         </ram:OccurrenceDateTime>
       </ram:ActualDeliverySupplyChainEvent>
-    </ram:ApplicableHeaderTradeDelivery>` : ''}
+    </ram:ApplicableHeaderTradeDelivery>
     <ram:ApplicableHeaderTradeSettlement>
       <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>${taxBreakdownXml}
       <ram:SpecifiedTradePaymentTerms>
@@ -1378,13 +1379,17 @@
   el('i-issue').addEventListener('change', () => {
     if (!el('i-due').value && el('i-issue').value){
       el('i-due').value = addDays(el('i-issue').value, 30);
-      refresh();
     }
+    if (!el('i-deliverydate').value && el('i-issue').value){
+      el('i-deliverydate').value = el('i-issue').value;
+    }
+    refresh();
   });
 
   // Init
   el('i-issue').value = new Date().toISOString().slice(0,10);
   el('i-due').value = addDays(el('i-issue').value, 30);
+  el('i-deliverydate').value = el('i-issue').value;
   if (!el('i-number').value) el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
   addLineRow({ desig: 'Prestation de service', qty: 1, unit: 'unité', price: 0, vat: 20 });
   sellerProfiles.init();
