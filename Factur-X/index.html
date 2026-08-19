@@ -197,14 +197,14 @@
         <div class="field-row" style="align-items:flex-end;">
           <div><label for="s-eaddr-scheme">Schéma (BT-34-1)</label>
             <select id="s-eaddr-scheme">
-              <option value="0009">0009 – SIRET</option>
               <option value="0002">0002 – SIRENE (SIREN)</option>
+              <option value="0009">0009 – SIRET</option>
               <option value="EM">EM – Email</option>
             </select>
           </div>
           <div style="display:flex;gap:6px;align-items:flex-end;">
-            <div style="flex:1;"><label for="s-eaddr">Adresse électronique (BT-34)</label><input id="s-eaddr" type="text" placeholder="Identifiant de routage (SIRET, Peppol ID…)"></div>
-            <button class="btn btn-ghost" id="btn-s-eaddr-siret" type="button" title="Copier le SIRET" style="padding:9px 10px;font-size:11.5px;white-space:nowrap;">= SIRET</button>
+            <div style="flex:1;"><label for="s-eaddr">Adresse électronique (BT-34)</label><input id="s-eaddr" type="text" placeholder="Identifiant de routage (SIREN, SIRET, Peppol ID…)"></div>
+            <button class="btn btn-ghost" id="btn-s-eaddr-siret" type="button" title="Copier le SIREN" style="padding:9px 10px;font-size:11.5px;white-space:nowrap;">= SIREN</button>
           </div>
         </div>
       </div>
@@ -669,12 +669,21 @@
     label: 'acheteur'
   });
 
+  function ensureSellerEaddrDefault(){
+    if (!el('s-eaddr').value && el('s-siren').value){
+      el('s-eaddr').value = el('s-siren').value;
+      el('s-eaddr-scheme').value = '0002';
+    }
+  }
+
   el('btn-s-eaddr-siret').addEventListener('click', () => {
-    if (!el('s-siret').value){ showStatus('Renseigne le SIRET vendeur avant de le copier.', 'err'); return; }
-    el('s-eaddr').value = el('s-siret').value;
-    el('s-eaddr-scheme').value = '0009';
+    if (!el('s-siren').value){ showStatus('Renseigne le SIREN vendeur avant de le copier.', 'err'); return; }
+    el('s-eaddr').value = el('s-siren').value;
+    el('s-eaddr-scheme').value = '0002';
     refresh();
   });
+  el('s-siren').addEventListener('input', ensureSellerEaddrDefault);
+  el('s-profile-select').addEventListener('change', ensureSellerEaddrDefault);
   el('btn-b-eaddr-siret').addEventListener('click', () => {
     if (!el('b-siret').value){ showStatus('Renseigne le SIRET acheteur avant de le copier.', 'err'); return; }
     el('b-eaddr').value = el('b-siret').value;
@@ -778,6 +787,7 @@
       if (!count) throw new Error('aucune donnée reconnue dans ce fichier');
       sellerProfiles.init();
       buyerProfiles.init();
+      ensureSellerEaddrDefault();
       if (!el('i-number').value) el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
       refresh();
       showStatus(`Import réussi (${count} jeu(x) de données restaurés).`, 'ok');
@@ -1462,6 +1472,7 @@
   addLineRow({ desig: 'Prestation de service', qty: 1, unit: 'unité', price: 0, vat: 20 });
   sellerProfiles.init();
   buyerProfiles.init();
+  ensureSellerEaddrDefault();
   refresh();
 
 })();
