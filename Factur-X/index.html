@@ -319,6 +319,15 @@
         <div class="field-row single">
           <div><label for="i-notes">Notes / mentions complémentaires</label><textarea id="i-notes" placeholder="TVA non applicable, art. 293 B du CGI (le cas échéant)…"></textarea></div>
         </div>
+        <div class="field-row single">
+          <div><label for="i-note-pmd">Pénalités de retard (BT-22, code PMD) — obligatoire (BR-FR-05)</label><input id="i-note-pmd" type="text"></div>
+        </div>
+        <div class="field-row single">
+          <div><label for="i-note-pmt">Indemnité forfaitaire de recouvrement (BT-22, code PMT) — obligatoire (BR-FR-05)</label><input id="i-note-pmt" type="text"></div>
+        </div>
+        <div class="field-row single">
+          <div><label for="i-note-aab">Escompte ou absence d'escompte (BT-22, code AAB) — obligatoire (BR-FR-05)</label><input id="i-note-aab" type="text"></div>
+        </div>
       </div>
 
       <div class="panel">
@@ -982,7 +991,10 @@
       el('i-terms').value ? 'Conditions de paiement : ' + esc(el('i-terms').value) : '',
       el('s-iban').value ? 'IBAN : ' + esc(el('s-iban').value) + (el('s-bic').value ? ' — BIC : ' + esc(el('s-bic').value) : '') : '',
       el('i-notes').value,
-      el('i-vatexemption').value
+      el('i-vatexemption').value,
+      el('i-note-pmd').value,
+      el('i-note-pmt').value,
+      el('i-note-aab').value
     ].filter(Boolean).join('<br>');
 
     return { lines, totals };
@@ -1067,6 +1079,18 @@
     </ram:IssueDateTime>${notes ? `
     <ram:IncludedNote>
       <ram:Content>${esc(notes)}</ram:Content>
+    </ram:IncludedNote>` : ''}${el('i-note-pmd').value ? `
+    <ram:IncludedNote>
+      <ram:Content>${esc(el('i-note-pmd').value)}</ram:Content>
+      <ram:SubjectCode>PMD</ram:SubjectCode>
+    </ram:IncludedNote>` : ''}${el('i-note-pmt').value ? `
+    <ram:IncludedNote>
+      <ram:Content>${esc(el('i-note-pmt').value)}</ram:Content>
+      <ram:SubjectCode>PMT</ram:SubjectCode>
+    </ram:IncludedNote>` : ''}${el('i-note-aab').value ? `
+    <ram:IncludedNote>
+      <ram:Content>${esc(el('i-note-aab').value)}</ram:Content>
+      <ram:SubjectCode>AAB</ram:SubjectCode>
     </ram:IncludedNote>` : ''}
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>${lineItemsXml}
@@ -1110,7 +1134,7 @@
     <ram:ApplicableHeaderTradeSettlement>
       <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>${taxBreakdownXml}
       <ram:SpecifiedTradePaymentTerms>
-        <ram:Description>${esc(el('i-terms').value || '')}</ram:Description>
+        ${el('i-terms').value ? `<ram:Description>${esc(el('i-terms').value)}</ram:Description>` : ''}
         ${dueDate ? `<ram:DueDateDateTime><udt:DateTimeString format="102">${toYYYYMMDD(dueDate)}</udt:DateTimeString></ram:DueDateDateTime>` : ''}
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
@@ -1380,7 +1404,10 @@
       el('i-terms').value ? 'Conditions de paiement : ' + el('i-terms').value : '',
       el('s-iban').value ? 'IBAN : ' + el('s-iban').value + (el('s-bic').value ? '  BIC : ' + el('s-bic').value : '') : '',
       el('i-notes').value,
-      el('i-vatexemption').value
+      el('i-vatexemption').value,
+      el('i-note-pmd').value,
+      el('i-note-pmt').value,
+      el('i-note-aab').value
     ].filter(Boolean);
     footLines.forEach(l => {
       wrapText(l, font, 8.5, pageW - marginX*2).forEach(wl => {
@@ -1508,6 +1535,9 @@
   el('i-issue').value = new Date().toISOString().slice(0,10);
   el('i-due').value = addDays(el('i-issue').value, 30);
   el('i-deliverydate').value = el('i-issue').value;
+  if (!el('i-note-pmd').value) el('i-note-pmd').value = "Pénalité de retard : taux d'intérêt de la BCE majoré de 10 points, exigible le jour suivant la date d'échéance, sans qu'un rappel soit nécessaire.";
+  if (!el('i-note-pmt').value) el('i-note-pmt').value = "Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 € (art. L441-10 du Code de commerce).";
+  if (!el('i-note-aab').value) el('i-note-aab').value = "Pas d'escompte pour paiement anticipé.";
   if (!el('i-number').value) el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
   addLineRow({ desig: 'Prestation de service', qty: 1, unit: 'unité', price: 0, vat: 20 });
   sellerProfiles.init();
