@@ -197,13 +197,13 @@
         <div class="field-row" style="align-items:flex-end;">
           <div><label for="s-eaddr-scheme">Schéma (BT-34-1)</label>
             <select id="s-eaddr-scheme">
+              <option value="0225">0225 – Annuaire central PPF (SIREN)</option>
               <option value="0002">0002 – SIRENE (SIREN)</option>
-              <option value="0009">0009 – SIRET</option>
               <option value="EM">EM – Email</option>
             </select>
           </div>
           <div style="display:flex;gap:6px;align-items:flex-end;">
-            <div style="flex:1;"><label for="s-eaddr">Adresse électronique (BT-34)</label><input id="s-eaddr" type="text" placeholder="Identifiant de routage (SIREN, SIRET, Peppol ID…)"></div>
+            <div style="flex:1;"><label for="s-eaddr">Adresse électronique (BT-34)</label><input id="s-eaddr" type="text" placeholder="Identifiant de routage (SIREN, Peppol ID…)"></div>
             <button class="btn btn-ghost" id="btn-s-eaddr-siret" type="button" title="Copier le SIREN" style="padding:9px 10px;font-size:11.5px;white-space:nowrap;">= SIREN</button>
           </div>
         </div>
@@ -246,14 +246,14 @@
         <div class="field-row" style="align-items:flex-end;">
           <div><label for="b-eaddr-scheme">Schéma (BT-49-1)</label>
             <select id="b-eaddr-scheme">
-              <option value="0009">0009 – SIRET</option>
+              <option value="0225">0225 – Annuaire central PPF (SIREN)</option>
               <option value="0002">0002 – SIRENE (SIREN)</option>
               <option value="EM">EM – Email</option>
             </select>
           </div>
           <div style="display:flex;gap:6px;align-items:flex-end;">
-            <div style="flex:1;"><label for="b-eaddr">Adresse électronique (BT-49)</label><input id="b-eaddr" type="text" placeholder="Identifiant de routage (SIRET, Peppol ID…)"></div>
-            <button class="btn btn-ghost" id="btn-b-eaddr-siret" type="button" title="Copier le SIRET" style="padding:9px 10px;font-size:11.5px;white-space:nowrap;">= SIRET</button>
+            <div style="flex:1;"><label for="b-eaddr">Adresse électronique (BT-49)</label><input id="b-eaddr" type="text" placeholder="Identifiant de routage (SIREN, Peppol ID…)"></div>
+            <button class="btn btn-ghost" id="btn-b-eaddr-siret" type="button" title="Copier le SIREN" style="padding:9px 10px;font-size:11.5px;white-space:nowrap;">= SIREN</button>
           </div>
         </div>
       </div>
@@ -274,6 +274,27 @@
         <div class="field-row">
           <div><label for="i-buyerref">Référence acheteur (BT-10)</label><input id="i-buyerref" type="text" placeholder="Code service"></div>
           <div><label for="i-orderref">Référence de commande (BT-13)</label><input id="i-orderref" type="text" placeholder="N° de bon de commande, n° d'engagement"></div>
+        </div>
+        <div class="field-row single">
+          <div>
+            <label for="i-businessprocess">Cadre de facturation (BT-23)</label>
+            <select id="i-businessprocess">
+              <option value="">— Sélectionner —</option>
+              <option value="B1">B1 – Bien : facture (ou facture d'acompte en attente de règlement)</option>
+              <option value="B2">B2 – Bien : facture d'acompte déjà payée</option>
+              <option value="B4">B4 – Bien</option>
+              <option value="B7">B7 – Bien</option>
+              <option value="B8">B8 – Bien</option>
+              <option value="S1">S1 – Service : facture (ou facture d'acompte en attente de règlement)</option>
+              <option value="S2">S2 – Service : facture d'acompte déjà payée</option>
+              <option value="S4">S4 – Service</option>
+              <option value="S5">S5 – Service</option>
+              <option value="S6">S6 – Service</option>
+              <option value="S7">S7 – Service</option>
+              <option value="S8">S8 – Service</option>
+            </select>
+            <p class="hint" style="margin-top:4px;">Le premier caractère indique la catégorie (B = bien, S = service). Au-delà de B1/B2/S1/S2, la signification exacte de chaque code dépend de ta plateforme (PDP/PPF) — vérifie avec elle si tu hésites.</p>
+          </div>
         </div>
         <div class="field-row">
           <div><label for="i-deliverydate">Date de livraison / d'exécution (BT-72)</label><input id="i-deliverydate" type="date"></div>
@@ -672,24 +693,36 @@
   function ensureSellerEaddrDefault(){
     if (!el('s-eaddr').value && el('s-siren').value){
       el('s-eaddr').value = el('s-siren').value;
-      el('s-eaddr-scheme').value = '0002';
+      el('s-eaddr-scheme').value = '0225';
     }
+  }
+  function sirenFromSiret(siret){
+    return (siret || '').replace(/\s/g, '').slice(0, 9);
   }
 
   el('btn-s-eaddr-siret').addEventListener('click', () => {
     if (!el('s-siren').value){ showStatus('Renseigne le SIREN vendeur avant de le copier.', 'err'); return; }
     el('s-eaddr').value = el('s-siren').value;
-    el('s-eaddr-scheme').value = '0002';
+    el('s-eaddr-scheme').value = '0225';
     refresh();
   });
   el('s-siren').addEventListener('input', ensureSellerEaddrDefault);
   el('s-profile-select').addEventListener('change', ensureSellerEaddrDefault);
+
+  function ensureBuyerEaddrDefault(){
+    if (!el('b-eaddr').value && el('b-siret').value.length >= 9){
+      el('b-eaddr').value = sirenFromSiret(el('b-siret').value);
+      el('b-eaddr-scheme').value = '0225';
+    }
+  }
   el('btn-b-eaddr-siret').addEventListener('click', () => {
-    if (!el('b-siret').value){ showStatus('Renseigne le SIRET acheteur avant de le copier.', 'err'); return; }
-    el('b-eaddr').value = el('b-siret').value;
-    el('b-eaddr-scheme').value = '0009';
+    if (el('b-siret').value.length < 9){ showStatus('Renseigne le SIRET acheteur (au moins 9 chiffres) avant de le copier.', 'err'); return; }
+    el('b-eaddr').value = sirenFromSiret(el('b-siret').value);
+    el('b-eaddr-scheme').value = '0225';
     refresh();
   });
+  el('b-siret').addEventListener('input', ensureBuyerEaddrDefault);
+  el('b-profile-select').addEventListener('change', ensureBuyerEaddrDefault);
 
   // ---------- Compteur de numérotation FA-AAAA-MM-NNNN ----------
   const INVOICE_COUNTER_KEY = 'facturx_invoice_counter_v1';
@@ -788,6 +821,7 @@
       sellerProfiles.init();
       buyerProfiles.init();
       ensureSellerEaddrDefault();
+      ensureBuyerEaddrDefault();
       if (!el('i-number').value) el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
       refresh();
       showStatus(`Import réussi (${count} jeu(x) de données restaurés).`, 'ok');
@@ -1017,7 +1051,10 @@
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
-  <rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocumentContext>${el('i-businessprocess').value ? `
+    <ram:BusinessProcessSpecifiedDocumentContextParameter>
+      <ram:ID>${esc(el('i-businessprocess').value)}</ram:ID>
+    </ram:BusinessProcessSpecifiedDocumentContextParameter>` : ''}
     <ram:GuidelineSpecifiedDocumentContextParameter>
       <ram:ID>urn:cen.eu:en16931:2017</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
@@ -1036,6 +1073,7 @@
     <ram:ApplicableHeaderTradeAgreement>
       ${el('i-buyerref').value ? `<ram:BuyerReference>${esc(el('i-buyerref').value)}</ram:BuyerReference>` : ''}
       <ram:SellerTradeParty>
+        ${sEaddr ? `<ram:GlobalID schemeID="${esc(sEaddrScheme)}">${esc(sEaddr)}</ram:GlobalID>` : ''}
         <ram:Name>${esc(sName || 'Émetteur')}</ram:Name>
         ${sSiren ? `<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${esc(sSiren)}</ram:ID></ram:SpecifiedLegalOrganization>` : ''}
         <ram:PostalTradeAddress>
@@ -1048,6 +1086,7 @@
         ${sTva ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${esc(sTva)}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}
       </ram:SellerTradeParty>
       <ram:BuyerTradeParty>
+        ${bEaddr ? `<ram:GlobalID schemeID="${esc(bEaddrScheme)}">${esc(bEaddr)}</ram:GlobalID>` : ''}
         <ram:Name>${esc(bName || 'Destinataire')}</ram:Name>
         ${bSiret ? `<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${esc(bSiret)}</ram:ID></ram:SpecifiedLegalOrganization>` : ''}
         <ram:PostalTradeAddress>
@@ -1382,6 +1421,7 @@
     if (!el('i-number').value.trim()) errors.push('le numéro de facture');
     if (!el('i-issue').value) errors.push("la date d'émission");
     if (!lines.length || lines.every(l => !l.designation && l.unitPrice === 0)) errors.push('au moins une ligne de facturation');
+    if (!el('i-businessprocess').value) errors.push('le cadre de facturation (BT-23)');
     return errors;
   }
 
@@ -1473,6 +1513,7 @@
   sellerProfiles.init();
   buyerProfiles.init();
   ensureSellerEaddrDefault();
+  ensureBuyerEaddrDefault();
   refresh();
 
 })();
