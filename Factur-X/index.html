@@ -61,7 +61,8 @@
   table.lines th{font-size:10.5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);text-align:left;padding:4px 6px;border-bottom:1px solid var(--ink);}
   table.lines td{padding:5px 6px;vertical-align:top;border-bottom:1px solid var(--paper-line);}
   table.lines td input,table.lines td select{padding:6px 7px;font-size:13px;}
-  .col-qty,.col-unit,.col-price,.col-vat{width:70px;}
+  .col-qty,.col-unit,.col-price{width:70px;}
+  .col-vat{width:118px;}
   .col-total{width:90px;font-family:var(--mono);font-size:12.5px;text-align:right;padding-top:10px;white-space:nowrap;}
   .col-del{width:30px;text-align:center;}
   .btn-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;line-height:1;padding:6px;}
@@ -193,6 +194,19 @@
           <div><label for="s-iban">IBAN</label><input id="s-iban" type="text" placeholder="FR76 1234 5678 9012 3456 7890 123"></div>
           <div><label for="s-bic">BIC</label><input id="s-bic" type="text" placeholder="AGRIFRPP"></div>
         </div>
+        <div class="field-row" style="align-items:flex-end;">
+          <div><label for="s-eaddr-scheme">Schéma (BT-34-1)</label>
+            <select id="s-eaddr-scheme">
+              <option value="0225">0225 – Annuaire central PPF (SIREN)</option>
+              <option value="0002">0002 – SIRENE (SIREN)</option>
+              <option value="EM">EM – Email</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:6px;align-items:flex-end;">
+            <div style="flex:1;"><label for="s-eaddr">Adresse électronique (BT-34)</label><input id="s-eaddr" type="text" placeholder="Identifiant de routage (SIREN, Peppol ID…)"></div>
+            <button class="btn btn-ghost" id="btn-s-eaddr-siret" type="button" title="Copier le SIREN" style="padding:9px 10px;font-size:11.5px;white-space:nowrap;">= SIREN</button>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -229,6 +243,19 @@
           <div><label for="b-siret">SIRET</label><input id="b-siret" type="text" placeholder="98765432100010" maxlength="14"></div>
           <div><label for="b-tva">N° TVA intracom.</label><input id="b-tva" type="text" placeholder="FR98987654321"></div>
         </div>
+        <div class="field-row" style="align-items:flex-end;">
+          <div><label for="b-eaddr-scheme">Schéma (BT-49-1)</label>
+            <select id="b-eaddr-scheme">
+              <option value="0225">0225 – Annuaire central PPF (SIREN)</option>
+              <option value="0002">0002 – SIRENE (SIREN)</option>
+              <option value="EM">EM – Email</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:6px;align-items:flex-end;">
+            <div style="flex:1;"><label for="b-eaddr">Adresse électronique (BT-49)</label><input id="b-eaddr" type="text" placeholder="Identifiant de routage (SIREN, Peppol ID…)"></div>
+            <button class="btn btn-ghost" id="btn-b-eaddr-siret" type="button" title="Copier le SIREN" style="padding:9px 10px;font-size:11.5px;white-space:nowrap;">= SIREN</button>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -248,8 +275,33 @@
           <div><label for="i-buyerref">Référence acheteur (BT-10)</label><input id="i-buyerref" type="text" placeholder="Code service"></div>
           <div><label for="i-orderref">Référence de commande (BT-13)</label><input id="i-orderref" type="text" placeholder="N° de bon de commande, n° d'engagement"></div>
         </div>
+        <div class="field-row single">
+          <div>
+            <label for="i-businessprocess">Cadre de facturation (BT-23)</label>
+            <select id="i-businessprocess">
+              <option value="">— Sélectionner —</option>
+              <option value="B1">B1 – Bien : facture (ou facture d'acompte en attente de règlement)</option>
+              <option value="B2">B2 – Bien : facture d'acompte déjà payée</option>
+              <option value="B4">B4 – Bien</option>
+              <option value="B7">B7 – Bien</option>
+              <option value="B8">B8 – Bien</option>
+              <option value="S1">S1 – Service : facture (ou facture d'acompte en attente de règlement)</option>
+              <option value="S2">S2 – Service : facture d'acompte déjà payée</option>
+              <option value="S4">S4 – Service</option>
+              <option value="S5">S5 – Service</option>
+              <option value="S6">S6 – Service</option>
+              <option value="S7">S7 – Service</option>
+              <option value="S8">S8 – Service</option>
+            </select>
+            <p class="hint" style="margin-top:4px;">Le premier caractère indique la catégorie (B = bien, S = service). Au-delà de B1/B2/S1/S2, la signification exacte de chaque code dépend de ta plateforme (PDP/PPF) — vérifie avec elle si tu hésites.</p>
+          </div>
+        </div>
         <div class="field-row">
           <div><label for="i-deliverydate">Date de livraison / d'exécution (BT-72)</label><input id="i-deliverydate" type="date"></div>
+          <p class="hint" style="margin:2px 0 0;">Pré-remplie avec la date d'émission (élément obligatoire dans le XML) — modifiable si différente.</p>
+        </div>
+        <div class="field-row single">
+          <div><label for="i-vatexemption">Motif d'exonération / d'autoliquidation (si une ligne est à 0 %, hors taux zéro)</label><input id="i-vatexemption" type="text" placeholder="Ex. TVA non applicable, art. 293 B du CGI — ou — Autoliquidation, art. 283-2 nonies du CGI"></div>
         </div>
         <div class="field-row">
           <div><label for="i-terms">Conditions de paiement</label><input id="i-terms" type="text" placeholder="Paiement à 30 jours"></div>
@@ -266,6 +318,15 @@
         </div>
         <div class="field-row single">
           <div><label for="i-notes">Notes / mentions complémentaires</label><textarea id="i-notes" placeholder="TVA non applicable, art. 293 B du CGI (le cas échéant)…"></textarea></div>
+        </div>
+        <div class="field-row single">
+          <div><label for="i-note-pmd">Pénalités de retard (BT-22, code PMD) — obligatoire (BR-FR-05)</label><input id="i-note-pmd" type="text"></div>
+        </div>
+        <div class="field-row single">
+          <div><label for="i-note-pmt">Indemnité forfaitaire de recouvrement (BT-22, code PMT) — obligatoire (BR-FR-05)</label><input id="i-note-pmt" type="text"></div>
+        </div>
+        <div class="field-row single">
+          <div><label for="i-note-aab">Escompte ou absence d'escompte (BT-22, code AAB) — obligatoire (BR-FR-05)</label><input id="i-note-aab" type="text"></div>
         </div>
       </div>
 
@@ -383,6 +444,15 @@
     return String(str == null ? '' : str)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  }
+
+  const VAT_CATEGORY_LABELS = { S: '', Z: 'taux zéro', E: 'exonération', AE: 'autoliquidation', O: 'hors champ' };
+  function vatCategorySuffix(category){
+    const label = VAT_CATEGORY_LABELS[category];
+    return label ? ` (${label})` : '';
+  }
+  function vatCategoryShort(category){
+    return category && category !== 'S' ? ` (${category})` : '';
   }
 
   function fmtMoney(n){
@@ -606,7 +676,7 @@
   const sellerProfiles = createProfileManager({
     storageKey: 'facturx_seller_profiles_v1',
     lastKey: 'facturx_last_seller_profile_v1',
-    fieldIds: ['s-name','s-addr','s-postal','s-city','s-country','s-siren','s-siret','s-tva','s-legal','s-iban','s-bic'],
+    fieldIds: ['s-name','s-addr','s-postal','s-city','s-country','s-siren','s-siret','s-tva','s-legal','s-iban','s-bic','s-eaddr','s-eaddr-scheme'],
     selectId: 's-profile-select',
     nameId: 's-profile-name',
     saveBtnId: 'btn-save-profile',
@@ -620,7 +690,7 @@
   const buyerProfiles = createProfileManager({
     storageKey: 'facturx_buyer_profiles_v1',
     lastKey: 'facturx_last_buyer_profile_v1',
-    fieldIds: ['b-name','b-addr','b-postal','b-city','b-country','b-siret','b-tva'],
+    fieldIds: ['b-name','b-addr','b-postal','b-city','b-country','b-siret','b-tva','b-eaddr','b-eaddr-scheme'],
     selectId: 'b-profile-select',
     nameId: 'b-profile-name',
     saveBtnId: 'btn-save-buyer-profile',
@@ -628,6 +698,40 @@
     hintId: 'buyer-profile-hint',
     label: 'acheteur'
   });
+
+  function ensureSellerEaddrDefault(){
+    if (!el('s-eaddr').value && el('s-siren').value){
+      el('s-eaddr').value = el('s-siren').value;
+      el('s-eaddr-scheme').value = '0225';
+    }
+  }
+  function sirenFromSiret(siret){
+    return (siret || '').replace(/\s/g, '').slice(0, 9);
+  }
+
+  el('btn-s-eaddr-siret').addEventListener('click', () => {
+    if (!el('s-siren').value){ showStatus('Renseigne le SIREN vendeur avant de le copier.', 'err'); return; }
+    el('s-eaddr').value = el('s-siren').value;
+    el('s-eaddr-scheme').value = '0225';
+    refresh();
+  });
+  el('s-siren').addEventListener('input', ensureSellerEaddrDefault);
+  el('s-profile-select').addEventListener('change', ensureSellerEaddrDefault);
+
+  function ensureBuyerEaddrDefault(){
+    if (!el('b-eaddr').value && el('b-siret').value.length >= 9){
+      el('b-eaddr').value = sirenFromSiret(el('b-siret').value);
+      el('b-eaddr-scheme').value = '0225';
+    }
+  }
+  el('btn-b-eaddr-siret').addEventListener('click', () => {
+    if (el('b-siret').value.length < 9){ showStatus('Renseigne le SIRET acheteur (au moins 9 chiffres) avant de le copier.', 'err'); return; }
+    el('b-eaddr').value = sirenFromSiret(el('b-siret').value);
+    el('b-eaddr-scheme').value = '0225';
+    refresh();
+  });
+  el('b-siret').addEventListener('input', ensureBuyerEaddrDefault);
+  el('b-profile-select').addEventListener('change', ensureBuyerEaddrDefault);
 
   // ---------- Compteur de numérotation FA-AAAA-MM-NNNN ----------
   const INVOICE_COUNTER_KEY = 'facturx_invoice_counter_v1';
@@ -725,6 +829,8 @@
       if (!count) throw new Error('aucune donnée reconnue dans ce fichier');
       sellerProfiles.init();
       buyerProfiles.init();
+      ensureSellerEaddrDefault();
+      ensureBuyerEaddrDefault();
       if (!el('i-number').value) el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
       refresh();
       showStatus(`Import réussi (${count} jeu(x) de données restaurés).`, 'ok');
@@ -756,11 +862,14 @@
       <td class="col-price"><input type="number" class="ln-price" value="0" step="0.01" min="0"></td>
       <td class="col-vat">
         <select class="ln-vat">
-          <option value="20">20</option>
-          <option value="10">10</option>
-          <option value="5.5">5,5</option>
-          <option value="2.1">2,1</option>
-          <option value="0">0</option>
+          <option value="20|S">20 %</option>
+          <option value="10|S">10 %</option>
+          <option value="5.5|S">5,5 %</option>
+          <option value="2.1|S">2,1 %</option>
+          <option value="0|Z">0 % – taux zéro</option>
+          <option value="0|E">0 % – exonération</option>
+          <option value="0|AE">0 % – autoliquidation</option>
+          <option value="0|O">0 % – hors champ</option>
         </select>
       </td>
       <td class="col-total"><span class="ln-total">0,00 €</span></td>
@@ -780,7 +889,7 @@
       tr.querySelector('.ln-qty').value = prefill.qty != null ? prefill.qty : 1;
       tr.querySelector('.ln-unit').value = prefill.unit || 'unité';
       tr.querySelector('.ln-price').value = prefill.price != null ? prefill.price : 0;
-      tr.querySelector('.ln-vat').value = prefill.vat != null ? prefill.vat : 20;
+      tr.querySelector('.ln-vat').value = (prefill.vat != null ? prefill.vat : 20) + '|' + (prefill.vatCategory || 'S');
     }
   }
 
@@ -789,12 +898,14 @@
     return rows.map(tr => {
       const qty = parseFloat(tr.querySelector('.ln-qty').value) || 0;
       const price = parseFloat(tr.querySelector('.ln-price').value) || 0;
+      const [rateStr, category] = tr.querySelector('.ln-vat').value.split('|');
       return {
         designation: tr.querySelector('.ln-desig').value.trim(),
         quantity: qty,
         unit: tr.querySelector('.ln-unit').value,
         unitPrice: price,
-        vatRate: parseFloat(tr.querySelector('.ln-vat').value) || 0,
+        vatRate: parseFloat(rateStr) || 0,
+        vatCategory: category || 'S',
         totalEl: tr.querySelector('.ln-total')
       };
     });
@@ -803,19 +914,18 @@
   // ---------- Totals ----------
   function computeTotals(lines){
     let totalHT = 0;
-    const byRate = {};
+    const byGroup = {};
     lines.forEach(l => {
       const lineHT = l.quantity * l.unitPrice;
       totalHT += lineHT;
-      byRate[l.vatRate] = (byRate[l.vatRate] || 0) + lineHT;
+      const key = l.vatRate + '|' + l.vatCategory;
+      if (!byGroup[key]) byGroup[key] = { rate: l.vatRate, category: l.vatCategory, baseHT: 0 };
+      byGroup[key].baseHT += lineHT;
       if (l.totalEl) l.totalEl.textContent = fmtMoney(lineHT) + ' €';
     });
-    const vatBreakdown = Object.keys(byRate).map(rate => {
-      const baseHT = byRate[rate];
-      const r = parseFloat(rate);
-      const vatAmount = baseHT * r / 100;
-      return { rate: r, baseHT, vatAmount };
-    }).sort((a,b)=>b.rate-a.rate);
+    const vatBreakdown = Object.values(byGroup).map(g => ({
+      rate: g.rate, category: g.category, baseHT: g.baseHT, vatAmount: g.baseHT * g.rate / 100
+    })).sort((a,b)=>b.rate-a.rate);
     const totalVAT = vatBreakdown.reduce((s,t)=>s+t.vatAmount,0);
     const totalTTC = totalHT + totalVAT;
     return { totalHT, totalVAT, totalTTC, vatBreakdown };
@@ -861,13 +971,13 @@
         <td>${esc(l.designation) || '—'}</td>
         <td class="num">${l.quantity} ${esc(l.unit)}</td>
         <td class="num">${fmtMoney(l.unitPrice)} €</td>
-        <td class="num">${l.vatRate}%</td>
+        <td class="num">${l.vatRate}%${esc(vatCategorySuffix(l.vatCategory))}</td>
         <td class="num">${fmtMoney(l.quantity * l.unitPrice)} €</td>
       </tr>`).join('');
     el('pv-lines').innerHTML = linesHtml || `<tr><td colspan="5" style="color:#999;">Aucune ligne</td></tr>`;
 
     const vatLines = totals.vatBreakdown.map(t =>
-      `<div><span>dont TVA ${t.rate}%</span><span>${fmtMoney(t.vatAmount)} €</span></div>`
+      `<div><span>dont TVA ${t.rate}%${esc(vatCategorySuffix(t.category))}</span><span>${fmtMoney(t.vatAmount)} €</span></div>`
     ).join('');
     el('pv-totals').innerHTML = `
       <div><span>Total HT</span><span>${fmtMoney(totals.totalHT)} €</span></div>
@@ -880,7 +990,11 @@
       el('s-legal').value,
       el('i-terms').value ? 'Conditions de paiement : ' + esc(el('i-terms').value) : '',
       el('s-iban').value ? 'IBAN : ' + esc(el('s-iban').value) + (el('s-bic').value ? ' — BIC : ' + esc(el('s-bic').value) : '') : '',
-      el('i-notes').value
+      el('i-notes').value,
+      el('i-vatexemption').value,
+      el('i-note-pmd').value,
+      el('i-note-pmt').value,
+      el('i-note-aab').value
     ].filter(Boolean).join('<br>');
 
     return { lines, totals };
@@ -895,12 +1009,15 @@
 
     const sName = el('s-name').value, sAddr = el('s-addr').value, sPostal = el('s-postal').value,
           sCity = el('s-city').value, sCountry = el('s-country').value || 'FR',
-          sSiren = el('s-siren').value, sTva = el('s-tva').value;
+          sSiren = el('s-siren').value, sTva = el('s-tva').value,
+          sEaddr = el('s-eaddr').value, sEaddrScheme = el('s-eaddr-scheme').value || '0009';
     const bName = el('b-name').value, bAddr = el('b-addr').value, bPostal = el('b-postal').value,
-          bCity = el('b-city').value, bCountry = el('b-country').value || 'FR', bTva = el('b-tva').value;
+          bCity = el('b-city').value, bCountry = el('b-country').value || 'FR', bTva = el('b-tva').value,
+          bSiret = el('b-siret').value, bEaddr = el('b-eaddr').value, bEaddrScheme = el('b-eaddr-scheme').value || '0009';
+    const notes = el('i-notes').value;
 
+    const exemptionReason = el('i-vatexemption').value;
     const lineItemsXml = lines.map((l, i) => {
-      const cat = l.vatRate === 0 ? 'Z' : 'S';
       const unitCode = l.unit === 'heure' ? 'HUR' : (l.unit === 'kg' ? 'KGM' : (l.unit === 'm2' ? 'MTK' : 'C62'));
       return `
     <ram:IncludedSupplyChainTradeLineItem>
@@ -921,7 +1038,8 @@
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>${cat}</ram:CategoryCode>
+          ${l.vatCategory !== 'S' && exemptionReason ? `<ram:ExemptionReason>${esc(exemptionReason)}</ram:ExemptionReason>` : ''}
+          <ram:CategoryCode>${l.vatCategory}</ram:CategoryCode>
           <ram:RateApplicablePercent>${l.vatRate}</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
@@ -932,20 +1050,23 @@
     }).join('');
 
     const taxBreakdownXml = totals.vatBreakdown.map(t => {
-      const cat = t.rate === 0 ? 'Z' : 'S';
       return `
       <ram:ApplicableTradeTax>
         <ram:CalculatedAmount>${fmtXmlDecimal(t.vatAmount)}</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
+        ${t.category !== 'S' && exemptionReason ? `<ram:ExemptionReason>${esc(exemptionReason)}</ram:ExemptionReason>` : ''}
         <ram:BasisAmount>${fmtXmlDecimal(t.baseHT)}</ram:BasisAmount>
-        <ram:CategoryCode>${cat}</ram:CategoryCode>
+        <ram:CategoryCode>${t.category}</ram:CategoryCode>
         <ram:RateApplicablePercent>${t.rate}</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>`;
     }).join('');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
-  <rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocumentContext>${el('i-businessprocess').value ? `
+    <ram:BusinessProcessSpecifiedDocumentContextParameter>
+      <ram:ID>${esc(el('i-businessprocess').value)}</ram:ID>
+    </ram:BusinessProcessSpecifiedDocumentContextParameter>` : ''}
     <ram:GuidelineSpecifiedDocumentContextParameter>
       <ram:ID>urn:cen.eu:en16931:2017</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
@@ -955,12 +1076,28 @@
     <ram:TypeCode>380</ram:TypeCode>
     <ram:IssueDateTime>
       <udt:DateTimeString format="102">${toYYYYMMDD(issueDate)}</udt:DateTimeString>
-    </ram:IssueDateTime>
+    </ram:IssueDateTime>${notes ? `
+    <ram:IncludedNote>
+      <ram:Content>${esc(notes)}</ram:Content>
+    </ram:IncludedNote>` : ''}${el('i-note-pmd').value ? `
+    <ram:IncludedNote>
+      <ram:Content>${esc(el('i-note-pmd').value)}</ram:Content>
+      <ram:SubjectCode>PMD</ram:SubjectCode>
+    </ram:IncludedNote>` : ''}${el('i-note-pmt').value ? `
+    <ram:IncludedNote>
+      <ram:Content>${esc(el('i-note-pmt').value)}</ram:Content>
+      <ram:SubjectCode>PMT</ram:SubjectCode>
+    </ram:IncludedNote>` : ''}${el('i-note-aab').value ? `
+    <ram:IncludedNote>
+      <ram:Content>${esc(el('i-note-aab').value)}</ram:Content>
+      <ram:SubjectCode>AAB</ram:SubjectCode>
+    </ram:IncludedNote>` : ''}
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>${lineItemsXml}
     <ram:ApplicableHeaderTradeAgreement>
       ${el('i-buyerref').value ? `<ram:BuyerReference>${esc(el('i-buyerref').value)}</ram:BuyerReference>` : ''}
       <ram:SellerTradeParty>
+        ${sEaddr ? `<ram:GlobalID schemeID="${esc(sEaddrScheme)}">${esc(sEaddr)}</ram:GlobalID>` : ''}
         <ram:Name>${esc(sName || 'Émetteur')}</ram:Name>
         ${sSiren ? `<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${esc(sSiren)}</ram:ID></ram:SpecifiedLegalOrganization>` : ''}
         <ram:PostalTradeAddress>
@@ -969,31 +1106,35 @@
           <ram:CityName>${esc(sCity)}</ram:CityName>
           <ram:CountryID>${esc(sCountry)}</ram:CountryID>
         </ram:PostalTradeAddress>
+        ${sEaddr ? `<ram:URIUniversalCommunication><ram:URIID schemeID="${esc(sEaddrScheme)}">${esc(sEaddr)}</ram:URIID></ram:URIUniversalCommunication>` : ''}
         ${sTva ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${esc(sTva)}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}
       </ram:SellerTradeParty>
       <ram:BuyerTradeParty>
+        ${bEaddr ? `<ram:GlobalID schemeID="${esc(bEaddrScheme)}">${esc(bEaddr)}</ram:GlobalID>` : ''}
         <ram:Name>${esc(bName || 'Destinataire')}</ram:Name>
+        ${bSiret ? `<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${esc(bSiret)}</ram:ID></ram:SpecifiedLegalOrganization>` : ''}
         <ram:PostalTradeAddress>
           <ram:PostcodeCode>${esc(bPostal)}</ram:PostcodeCode>
           <ram:LineOne>${esc(bAddr)}</ram:LineOne>
           <ram:CityName>${esc(bCity)}</ram:CityName>
           <ram:CountryID>${esc(bCountry)}</ram:CountryID>
         </ram:PostalTradeAddress>
+        ${bEaddr ? `<ram:URIUniversalCommunication><ram:URIID schemeID="${esc(bEaddrScheme)}">${esc(bEaddr)}</ram:URIID></ram:URIUniversalCommunication>` : ''}
         ${bTva ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${esc(bTva)}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}
       </ram:BuyerTradeParty>
       ${el('i-orderref').value ? `<ram:BuyerOrderReferencedDocument><ram:IssuerAssignedID>${esc(el('i-orderref').value)}</ram:IssuerAssignedID></ram:BuyerOrderReferencedDocument>` : ''}
-    </ram:ApplicableHeaderTradeAgreement>${el('i-deliverydate').value ? `
+    </ram:ApplicableHeaderTradeAgreement>
     <ram:ApplicableHeaderTradeDelivery>
       <ram:ActualDeliverySupplyChainEvent>
         <ram:OccurrenceDateTime>
-          <udt:DateTimeString format="102">${toYYYYMMDD(el('i-deliverydate').value)}</udt:DateTimeString>
+          <udt:DateTimeString format="102">${toYYYYMMDD(el('i-deliverydate').value || issueDate)}</udt:DateTimeString>
         </ram:OccurrenceDateTime>
       </ram:ActualDeliverySupplyChainEvent>
-    </ram:ApplicableHeaderTradeDelivery>` : ''}
+    </ram:ApplicableHeaderTradeDelivery>
     <ram:ApplicableHeaderTradeSettlement>
       <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>${taxBreakdownXml}
       <ram:SpecifiedTradePaymentTerms>
-        <ram:Description>${esc(el('i-terms').value || '')}</ram:Description>
+        ${el('i-terms').value ? `<ram:Description>${esc(el('i-terms').value)}</ram:Description>` : ''}
         ${dueDate ? `<ram:DueDateDateTime><udt:DateTimeString format="102">${toYYYYMMDD(dueDate)}</udt:DateTimeString></ram:DueDateDateTime>` : ''}
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
@@ -1228,7 +1369,7 @@
       text(l.quantity, cols.qty, y, { size: 9.5 });
       text(l.unit, cols.unit, y, { size: 9.5 });
       rightText(fmtMoney(l.unitPrice) + ' €', cols.price + 40, y, { size: 9.5 });
-      rightText(l.vatRate + '%', cols.vat + 20, y, { size: 9.5 });
+      rightText(l.vatRate + '%' + vatCategoryShort(l.vatCategory), cols.vat + 20, y, { size: 9.5 });
       rightText(fmtMoney(l.quantity * l.unitPrice) + ' €', cols.total, y, { size: 9.5, bold: true });
       y -= rowH;
       hr(y + 4, marginX, pageW - marginX, lineColor, 0.5);
@@ -1243,7 +1384,7 @@
     rightText(fmtMoney(totals.totalHT) + ' €', pageW - marginX, y, { size: 9.5 });
     y -= 13;
     totals.vatBreakdown.forEach(t => {
-      text(`dont TVA ${t.rate}%`, totBoxX, y, { size: 9.5, color: softColor });
+      text(`dont TVA ${t.rate}%${vatCategorySuffix(t.category)}`, totBoxX, y, { size: 9.5, color: softColor });
       rightText(fmtMoney(t.vatAmount) + ' €', pageW - marginX, y, { size: 9.5 });
       y -= 13;
     });
@@ -1262,7 +1403,11 @@
       el('s-legal').value,
       el('i-terms').value ? 'Conditions de paiement : ' + el('i-terms').value : '',
       el('s-iban').value ? 'IBAN : ' + el('s-iban').value + (el('s-bic').value ? '  BIC : ' + el('s-bic').value : '') : '',
-      el('i-notes').value
+      el('i-notes').value,
+      el('i-vatexemption').value,
+      el('i-note-pmd').value,
+      el('i-note-pmt').value,
+      el('i-note-aab').value
     ].filter(Boolean);
     footLines.forEach(l => {
       wrapText(l, font, 8.5, pageW - marginX*2).forEach(wl => {
@@ -1303,6 +1448,7 @@
     if (!el('i-number').value.trim()) errors.push('le numéro de facture');
     if (!el('i-issue').value) errors.push("la date d'émission");
     if (!lines.length || lines.every(l => !l.designation && l.unitPrice === 0)) errors.push('au moins une ligne de facturation');
+    if (!el('i-businessprocess').value) errors.push('le cadre de facturation (BT-23)');
     return errors;
   }
 
@@ -1378,17 +1524,26 @@
   el('i-issue').addEventListener('change', () => {
     if (!el('i-due').value && el('i-issue').value){
       el('i-due').value = addDays(el('i-issue').value, 30);
-      refresh();
     }
+    if (!el('i-deliverydate').value && el('i-issue').value){
+      el('i-deliverydate').value = el('i-issue').value;
+    }
+    refresh();
   });
 
   // Init
   el('i-issue').value = new Date().toISOString().slice(0,10);
   el('i-due').value = addDays(el('i-issue').value, 30);
+  el('i-deliverydate').value = el('i-issue').value;
+  if (!el('i-note-pmd').value) el('i-note-pmd').value = "Pénalité de retard : taux d'intérêt de la BCE majoré de 10 points, exigible le jour suivant la date d'échéance, sans qu'un rappel soit nécessaire.";
+  if (!el('i-note-pmt').value) el('i-note-pmt').value = "Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 € (art. L441-10 du Code de commerce).";
+  if (!el('i-note-aab').value) el('i-note-aab').value = "Pas d'escompte pour paiement anticipé.";
   if (!el('i-number').value) el('i-number').value = suggestNextInvoiceNumber(el('i-issue').value);
   addLineRow({ desig: 'Prestation de service', qty: 1, unit: 'unité', price: 0, vat: 20 });
   sellerProfiles.init();
   buyerProfiles.init();
+  ensureSellerEaddrDefault();
+  ensureBuyerEaddrDefault();
   refresh();
 
 })();
