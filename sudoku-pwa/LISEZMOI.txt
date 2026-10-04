@@ -1,0 +1,17 @@
+Sudoku installable (PWA)
+
+Contenu : index.html, manifest.webmanifest, sw.js, 3 icônes.
+
+Pour l'installer sur un téléphone, ces fichiers doivent être servis en HTTPS
+(ou depuis localhost). Ouvrir le fichier directement depuis le disque ne suffit pas.
+
+Hébergement simple et gratuit :
+  - GitHub Pages : déposer les 6 fichiers dans un dépôt, activer Pages.
+  - Netlify Drop (app.netlify.com/drop) : glisser-déposer le dossier.
+  - Ou un serveur interne en HTTPS.
+
+Installation :
+  - Android (Chrome) : menu ⋮ > « Installer l'application ».
+  - iPhone (Safari) : bouton Partager > « Sur l'écran d'accueil ».
+
+Après la première ouverture, le jeu fonctionne hors ligne.
