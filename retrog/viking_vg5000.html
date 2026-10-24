@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Viking VG5000</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Archivo:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<style>
+/* Layout: a single dark "cassette deck" world. Left: the TV screen with its controls; right: rules. Below: the reverse-engineering notes. */
+:root{
+  --bg:#0f1213;          /* soot */
+  --panel:#171c1d;       /* deck plastic */
+  --line:#2a3233;
+  --fg:#e7e2d4;          /* parchment */
+  --muted:#9aa19c;
+  --gold:#f0d64a;        /* EF9345 yellow */
+  --rust:#d8473a;        /* EF9345 red */
+  --cyan:#5fd3d6;
+  --screen:#000;
+  --display:"Pirata One","UnifrakturCook",Georgia,serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:18px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,7vw,64px);line-height:1;margin:0;color:var(--rust);letter-spacing:.02em}
+.tag{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.tv{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.screenbox{position:relative;background:var(--screen);border-radius:8px;overflow:hidden;aspect-ratio:320/250;max-width:100%}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.scan{pointer-events:none;position:absolute;inset:0;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.18) 3px);mix-blend-mode:multiply}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(5,7,8,.82);text-align:center;padding:16px}
+.overlay[hidden]{display:none}
+.overlay p{margin:0;color:var(--muted);font-size:14px;max-width:34ch}
+button{font-family:var(--body);font-weight:600;font-size:14px;color:var(--fg);background:#232a2b;border:1px solid #3a4445;border-radius:8px;padding:9px 14px;cursor:pointer}
+button:hover{border-color:var(--gold)}
+button:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.primary{background:var(--rust);border-color:var(--rust);color:#fff;font-size:16px;padding:12px 22px}
+.deck{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.deck .sp{flex:1}
+select{font-family:var(--body);font-size:14px;background:#232a2b;color:var(--fg);border:1px solid #3a4445;border-radius:8px;padding:8px 10px}
+label{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.pad{display:none;margin-top:14px;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.pad .keys3{order:3;flex-basis:100%}
+@media (max-width:520px){.overlay p{font-size:12px}.overlay .primary{font-size:14px;padding:10px 16px}}
+.hex{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);gap:8px}
+.hex button{padding:0;font-size:20px;touch-action:none;user-select:none;-webkit-user-select:none}
+.fire{width:84px;height:84px;border-radius:50%;background:var(--rust);border-color:var(--rust);color:#fff;font-size:15px;touch-action:none;user-select:none;-webkit-user-select:none}
+.keys3{display:flex;gap:8px;flex-wrap:wrap}
+@media (pointer:coarse){.pad{display:flex}}
+.pad.show{display:flex}
+aside{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0 0 8px;color:var(--gold);line-height:1.1}
+h3{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+.kbd{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14px}
+kbd{font-family:var(--mono);font-size:12px;background:#0b0e0e;border:1px solid #3a4445;border-bottom-width:2px;border-radius:5px;padding:1px 6px;white-space:nowrap}
+ul{margin:0;padding-left:18px}
+li{margin:4px 0}
+.notes{margin-top:34px}
+.notes h2{font-size:38px;color:var(--rust)}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+@media (max-width:820px){.cols{grid-template-columns:minmax(0,1fr)}}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.a{font-family:var(--mono);color:var(--cyan);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chain{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--mono);font-size:13px}
+.chain span{background:#0b0e0e;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.chain i{color:var(--muted);font-style:normal}
+.small{font-size:13px;color:var(--muted)}
+p{margin:0 0 10px;max-width:70ch}
+.state{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Viking</h1>
+    <span class="tag">Philips VG5000 · C. Holland · Z80 → JavaScript</span>
+  </header>
+
+  <div class="grid">
+    <section class="tv" aria-label="Écran du VG5000">
+      <div class="screenbox">
+        <canvas id="scr" width="320" height="250" aria-label="Écran du jeu"></canvas>
+        <div class="scan"></div>
+        <div class="overlay" id="boot">
+          <button class="primary" id="start">Charger la cassette</button>
+          <p>Le son démarre avec le jeu. Au menu : <b>1</b> clavier, <b>3</b> manettes, <b>D</b> démo, puis la force de 0 à 9.</p>
+        </div>
+      </div>
+      <div class="deck">
+        <button id="nmi" title="Échap">Retour menu (Δ)</button>
+        <button id="mute">Son : oui</button>
+        <span class="sp"></span>
+        <label for="speed">Vitesse
+          <select id="speed">
+            <option value="1.4">Lente</option>
+            <option value="1" selected>VG5000</option>
+            <option value="0.65">Rapide</option>
+          </select>
+        </label>
+        <label for="orig"><input type="checkbox" id="orig"> Accélération d'origine</label>
+        <button id="padbtn">Pavé tactile</button>
+      </div>
+      <div class="pad" id="pad">
+        <div class="hex" aria-label="Directions">
+          <button data-d="ul" aria-label="Haut gauche">↖</button>
+          <button data-d="u" aria-label="Haut">↑</button>
+          <button data-d="ur" aria-label="Haut droite">↗</button>
+          <button data-d="dl" aria-label="Bas gauche">↙</button>
+          <button data-d="d" aria-label="Bas">↓</button>
+          <button data-d="dr" aria-label="Bas droite">↘</button>
+        </div>
+        <div class="keys3">
+          <button data-k="1">1</button><button data-k="3">3</button><button data-k="D">D</button>
+          <button data-k="0">0</button><button data-k="5">5</button><button data-k="9">9</button>
+          <button data-k="\r">Entrée</button>
+        </div>
+        <button class="fire" id="fire">FEU</button>
+      </div>
+      <div class="state" id="state" aria-live="polite"></div>
+    </section>
+
+    <aside>
+      <div class="card">
+        <h3>Commandes</h3>
+        <div class="kbd">
+          <span><kbd>↑</kbd> <kbd>↓</kbd> + <kbd>←</kbd>/<kbd>→</kbd></span><span>6 directions de l'hexagone</span>
+          <span><kbd>7</kbd><kbd>8</kbd><kbd>9</kbd> <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span>pavé numérique</span>
+          <span><kbd>A</kbd><kbd>Z</kbd><kbd>E</kbd> <kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd></span><span>bloc de gauche (AZERTY)</span>
+          <span><kbd>Espace</kbd></span><span>feu : traîner un trésor</span>
+          <span><kbd>Échap</kbd></span><span>touche Δ : retour au menu</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>La règle du jeu</h2>
+        <ul>
+          <li>Cinq monstres entrent par le haut et errent au hasard vers le bas. Le plateau est un tore : ce qui sort en bas revient en haut.</li>
+          <li>Fonce sur un monstre : il devient pierre (+15). Le viking reste sur sa case.</li>
+          <li>Un monstre posé sur trois pierres (bas-gauche, bas, bas-droite) est pétrifié aussi, sans points.</li>
+          <li>Si un monstre entre sur ta case ou sur un trésor clignotant, la partie est perdue.</li>
+          <li>Marche sur un trésor puis garde <kbd>Espace</kbd> pour le déplacer. Le viking avance alors deux fois moins vite.</li>
+          <li>Cinq vagues, chacune avec un monstre différent. Les pierres restent d'une vague à l'autre.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>La force (0 à 9)</h3>
+        <ul class="small">
+          <li>Trésors : 1 en force 0, 3, 6 · 2 en force 1, 4, 7 · 3 en force 2, 5, 8, 9.</li>
+          <li>Forces 3, 4, 5, 9 : un seul monstre vulnérable à la fois, il passe au rouge.</li>
+          <li>Force 6 et plus : les monstres peuvent aussi monter.</li>
+          <li>Force 5 et plus : l'encerclement ne pétrifie plus (bug d'origine, voir plus bas).</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <section class="notes">
+    <h2>Sous le capot</h2>
+    <p>Chaque routine Z80 du bloc <code>PROG</code> a été traduite une à une en JavaScript. Le jeu tourne sur une mémoire de 64 Ko qui reprend les adresses d'origine : l'état de la partie vit dans la mémoire écran (<code>4000h</code>) et dans les variables de <code>56D7h</code> à <code>5760h</code>, comme sur la machine. Les graphismes, les tables et les textes sont lus directement dans les octets de la cassette.</p>
+
+    <div class="card" style="margin:16px 0">
+      <h3>Chaîne de chargement</h3>
+      <div class="chain">
+        <span>VG5000 · BASIC</span><i>SETEG/SETET, CLOAD →</i>
+        <span>NORSE · BASIC</span><i>CLOAD, CALL 7000 →</i>
+        <span>LOGO · 6800h</span><i>CLOAD →</i>
+        <span>SCREEN · 7000h</span><i>CLOAD, CALL 5000 →</i>
+        <span>PROG · 5000h</span>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="card tbl">
+        <h3>Routines</h3>
+        <table>
+          <thead><tr><th>Adresse</th><th>Rôle</th></tr></thead>
+          <tbody>
+            <tr><td class="a">5000</td><td>Entrée : menu puis boucle principale en 5004 (pile en 7F64)</td></tr>
+            <tr><td class="a">575C</td><td>Menu : logo animé, choix clavier/manettes/démo, force</td></tr>
+            <tr><td class="a">58D4</td><td>Nouvelle partie : monstres, trésors, joueur</td></tr>
+            <tr><td class="a">5A94</td><td>NMI (touche Δ), relance en 5000</td></tr>
+            <tr><td class="a">5AA1</td><td>IA : un monstre tiré au hasard tente un pas (30 essais)</td></tr>
+            <tr><td class="a">5CBE</td><td>Efface et redessine un monstre (4 cellules)</td></tr>
+            <tr><td class="a">5D3B</td><td>Adresse → ligne/colonne avec bouclage (lignes 3–22, colonnes 3–36)</td></tr>
+            <tr><td class="a">5D82</td><td>Joueur : lecture des commandes, capture, trésor</td></tr>
+            <tr><td class="a">5FC2</td><td>Dessine les trésors (jaune/rouge en alternance)</td></tr>
+            <tr><td class="a">6003</td><td>Tableau des records et saisie du nom</td></tr>
+            <tr><td class="a">6177</td><td>Test d'encerclement, toutes les 5 boucles</td></tr>
+            <tr><td class="a">6222</td><td>Pétrification par encerclement (6 éclairs)</td></tr>
+            <tr><td class="a">62CB</td><td>Ligne d'état : record, nom, score, force, vague</td></tr>
+            <tr><td class="a">63E1</td><td>Monstre vulnérable (forces 3, 4, 5, 9)</td></tr>
+            <tr><td class="a">64D0</td><td>Animation 3 images et passage de vague</td></tr>
+            <tr><td class="a">659B</td><td>Transformation en pierre (16 images)</td></tr>
+            <tr><td class="a">663B</td><td>Montée du plateau à l'écran</td></tr>
+            <tr><td class="a">6694</td><td>Attente de l'EF9345 (ports 8Fh/CFh) puis rafraîchissement ROM</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card tbl">
+        <h3>Variables</h3>
+        <table>
+          <thead><tr><th>Adresse</th><th>Contenu</th></tr></thead>
+          <tbody>
+            <tr><td class="a">56E1</td><td>Positions des 5 monstres (adresses écran)</td></tr>
+            <tr><td class="a">56D7</td><td>Positions visées, copiées après chaque pas</td></tr>
+            <tr><td class="a">56EB</td><td>Couleurs des monstres : 7, 6, 5, 4, 2</td></tr>
+            <tr><td class="a">56F2</td><td>Monstre pétrifié (5 octets)</td></tr>
+            <tr><td class="a">56F0</td><td>Score (16 bits)</td></tr>
+            <tr><td class="a">56FA</td><td>Position du viking (départ 4524h)</td></tr>
+            <tr><td class="a">5700</td><td>Image d'animation : 0, 28h, 50h</td></tr>
+            <tr><td class="a">5705</td><td>Trésors (3 × 16 bits, 0 = absent)</td></tr>
+            <tr><td class="a">570B</td><td>Graphisme du monstre de la vague</td></tr>
+            <tr><td class="a">570F</td><td>Viking sur un trésor</td></tr>
+            <tr><td class="a">5710</td><td>Pierre de la vague (caractères 3Ch à 45h)</td></tr>
+            <tr><td class="a">5712</td><td>Commandes : 2 clavier, 0 manettes</td></tr>
+            <tr><td class="a">5713</td><td>Force 0–9</td></tr>
+            <tr><td class="a">5714</td><td>Records : 5 × (score + 9 lettres)</td></tr>
+            <tr><td class="a">575A</td><td>Mode démo</td></tr>
+            <tr><td class="a">575B</td><td>Numéro de vague</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="cols" style="margin-top:18px">
+      <div class="card">
+        <h3>Ce que le code révèle</h3>
+        <ul>
+          <li>Le jeu ne garde aucune carte en mémoire : il lit le premier caractère de chaque case à l'écran. A3h case vide, AAh pierre, AEh monstre, B2h viking, B7h trésor.</li>
+          <li>Hexagones de 2×2 cellules ; voisins à ±50h+6, ±A0h et ±50h−6 octets.</li>
+          <li>Le hasard vient du registre R du Z80 et d'une table de 46 numéros de monstres en 5684h.</li>
+          <li>Les sons de la ROM sont bloquants : ce sont eux qui donnent son rythme au jeu.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Bugs d'origine conservés</h3>
+        <ul>
+          <li>Force 5 et plus : le test vers le haut utilise −4Ah, −10h, −4Ah au lieu des voisins réels. L'encerclement ne marche plus.</li>
+          <li>Gauche seule déplace le viking en bas à droite (direction 0 + 1).</li>
+          <li>Force 6 et plus : un monstre encore hors du plateau (ligne 2) qui monte est renvoyé en ligne 20–22 par le bouclage, parfois directement sur un trésor.</li>
+          <li>Tout score atteint la 5e place (0 au départ) : le nom est toujours demandé.</li>
+          <li>En 610F, seul l'octet bas du score est remis à zéro.</li>
+          <li>Victoire : un POP récupère l'adresse 6589h au lieu du score. Le comportement dépend de la ROM ; ici le score est conservé.</li>
+          <li>La zone des records contenait encore « 123 », « qsd », « gh », « fg » : des essais de l'auteur.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="small" style="margin-top:16px">Sans ROM du VG5000, les routines système sont réimplémentées : sons et mélodie (format T/O/notes), lecture clavier et manettes, adresse écran, police ROM. Le rendu EF9345 suit le principe des attributs série : une cellule graphique fixe le fond des caractères texte qui la suivent. Les durées et les hauteurs des sons sont donc approximatives.</p>
+  </section>
+</div>
+
+<script>
+const DATA = {"prog": "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", "logo": "gIAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIACA/yAAIAAgACAAIAAgACAAoTGhMSAAojGiMSAAozGjMSAApDGkMSAApTGlMSAApjGmMSAApzGnMSAAqDGoMSAAIAAgACAAIAAgACAAIAAgAID/IAAgACAAIAAgACAAIAChMaExIACiMaIxIACjMaMxIACkMaQxIAClMaUxIACmMaYxIACnMacxIACoMagxIAAgACAAIAAgACAAIAAgACAAgIAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIACAgCAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgAICAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAAAAAACAAIAAgACAAgIAgACAAIACqNqo2qTapNiAAIAAgACAArjOuM60zrTMgACAAIAAgALI3sjexN7E3IAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIACAgCAAIAAgAKo2qjapNqk2IAAgACAAIACuM64zrTOtMyAAIAAgACAAsjeyN7E3sTcgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgAICAIAAgACAArDasNqs2qzYgACAAIAAgALAzsDOvM68zIAAgACAAIAC0N7Q3szezNyAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAgIAgACAAIACsNqw2qzarNiAAIAAgACAAsDOwM68zrzMgACAAIAAgALQ3tDezN7M3IAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIACAgCAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgAICAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAgIAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIACAgCAAIAC2MrYytTK1MiAAIAAgACAAIAC6Nbo1uTW5NSAAIAAgACAAIAAgAKCDoIOpg6qDq4Osg62DoIOgg6CDoIOgg6CDoIOgg6CDoIPzg4CAIAAgALYytjK1MrUyIAAgACAAIAAgALo1ujW5Nbk1IAAgACAAIAAgACAAoIOgg6CDr4Owg7GDsoOzg6CDoIOgg6CD7YPug++D8IPxg/KDgIAgACAAuDK4MrcytzIgACAAIAAgACAAvDW8Nbs1uzUgACAAAAAAACAAIACgg6CDoIO0g7WDtoO3g7iDuYOgg6CDoIP0g/WD9oOgg6CDoIOAgCAAIAC4MrgytzK3MiAAIAAgACAAIAC8Nbw1uzW7NSAAIAAgACAAIAAgAKCDoIO6g7uDvIO9g76Dv4PAg8GDwoOgg/eDoYP4g6CDoIOgg4CAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAoIPDg82DzYPNg8SDxYPGg8eDzYPIg8mDoIOig/qDoIOgg6CDgIAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIACgg8qDy4PMg82DzoPPg9CD0YPSg9OD1IPVg6OD+4Ogg6CDoIOAgCAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgANaD14PYg9mD2oPbg9yD3YPeg9+D4IPhg+KDpIP8g6CDoIOgg4CAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAA44Pkg+WD5oPNg+eD6IPpg82D6oOgg+uD7IP9g/6DoIOgg6CDgPcgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIACA9yAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgAID3IAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAgIAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIADJycnJycmJycnJycnJycnJycnJycnJycnJycnJycnDGBHDUCLDUCLDUCICAAooAQ3lIQBoEQBAAdAH7bDhycGQzQ==", "screen": "5SEAaBEAQAHQB+2w4cnBkM3gBSgJ6yKMSGlgw+Yk+SrPSX7+LMLqJNfN5y8jzyIRAAAGBSvN0g84CuspKSkptW/rEPH+IiPCOCI+mDLpSa9HT+XNXAPhyQEKAMVQWCgm/iwoCdXNbCVCS9EoGc8szWwlKBLxzyzVzWwlwjgierPKZyXr4+vFzUcj0dXFzUcjYGnR5+vaZyXRwfHl1RgOCdpnJevlIfn/5+HaZyXVXnsjVrLr0SgHfiO2K+sg4cXN3zDB0eHVXnsjVrIoDevj6yNzI3LrCevhGOsBjCLF/vavMtFJKo5IKyN+I7bII14jVte3KPNPOtFJt3koRf4OIPDVI14jViPlzUcjCz4NOE7NQDwh6BY6kEi3KAMh7xbVzao24c0mByH1FjqQSLcoAyECF82qNsHh5cXNFQfh0SsYr/4OIAQjIxj2/g0g8tUjXiNWI+XrIyMjTiNGPg4hPTHlKh1J5StwK3Erd+HJEQoA1SghzWwlCHqzyjgiwdUIKBPPLM1sJQh6s8o4IgjCOCLtU4dI0e1ThUg+ATKESMHDmSI+ATJvSM2xMc3kMcOMIhEAACvXKAn+LMRsJe1Tz0nlzUcj4cUr1ygQ/izCOCIjzWwlwjgierMgAxH//+1TDkjRyT4BMnFI604jRiN4scjNdzz+BCAR5c2nArcg+s13PM2nArco9+FeI1blKg5I5+E/0O1TCUgj5evNJgc+IOEiC0jfKgtI7UMLSD7ffiP+DiASPiDffiMIfiPlZwhvzSYH4Rjotygl8i0y1n9PEZ4g/g8gBN02CAEaE7fyWjINIPfmf98aE7fyYzIYwN02CADNVzzD6jHdywP23csERt3LA+YoBN3LA6bNxTU+fyH+Nc2FDT7m3XcJzVUCIQEAIgVI3TYBAd02AAF2ydn1zacCt8F42cnZzacCMB1v3csHft1+BsLNMv6Aw88y/gjaFjPdNgeAfcPeMt02BwDdNgYA/gEgHt3LBEYoCt3LBIbdywPmGAjdywTG3csDpt02IAMgA0EDIANWA0cDNQMwAzADMAMgAyADVgNJA0QDRQNPAyADRwNBA00DRQMgA0IPWQ8gD0MPLg9ID08PTA9MD0EPTg9EDyAHIAcgByAHIAcgAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnASABpwGlAaMBowGmAacBpwGlAaMBowGmAacBpwGlAaMBowGmAacBpwGlAaMBowGmAacBpwGlAaMBowGmAacBpwGlAaMBowGmAacBpwGnAacBIAGnAakBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaYBpwEgAacBpQGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABqAGnASABpwGpASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGmAacBIAGnAaUBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAagBpwEgAacBqQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBpgGnASABpwGlAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGoAacBIAGnAakBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaYBpwEgAacBpQGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABqAGnASABpwGpASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGmAacBIAGnAaUBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAagBpwEgAacBqQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBpgGnASABpwGlAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGoAacBIAGnAakBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaEBIAAgAKIBowGjAaYBpwEgAacBpQGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABogGjAaMBoQEgASABqAGnASABpwGpASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGhASAAIACiAaMBowGmAacBIAGnAaUBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAagBpwEgAacBqQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBoQEgACAAogGjAaMBpgGnASABpwGlAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGiAaMBowGhASABIAGoAacBIAGnAakBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaEBIAEgAaIBowGjAaYBpwEgAacBpwGnAacBqQEgASABqAGnAacBqQEgASABqAGnAacBqQEgASABqAGnAacBqQEgASABqAGnAacBqQEgASABqAGnAacBqQEgASABqAGnASCApwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBpwGnAacBIIAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIADJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnDGBHDUALDUCLDUAIGAAooAQ28/t4w8/4FOO+SMAIvPP4EMOYrfLUg5CEAAEVVzb872AkVwhw7AfoFCXwf5n9XKXySV9YFMi5IeocGANYDBDD7eNYDMi9It8k6LkhXzX082NuvBzD3TX082NuvBzj3HgDNqjtBzSo7WHiBOHe6OPQuCM2OO/4EP9j+Aj/LGnkP1K47zao7LcJxO819PHrJOi9IRw4A26+r8qI7ey9fDBD0eckAAAAAEOx5yc19PNgOAAwoCtuvq/KwO3svX8kNyc19HNjbrwc41x4AzY47w7AbzeJH9TpvSLcoQj0IBPHDlx06c0j+3ygo8fX+CSAMPiDfOm5I5gcg9vHJ1g0oDzgQ/hM4DDpuSP6EzGM8PDJuSPHD0jw+ATJvSDp0SMt/y78ydEggBDpuSLfEYzw6cUjmQDJxSK8yb0gydEjJ8cMaM83FNToFSD3IGCgrfv4gKPojr3chl0jJzeVHOm9ItygSPSALPg3fPgrfrzJuSMk+Dd/JPgPfr8nNfzzDOC/j49uB5gHA24DmBMA6iUi3wN02BfLdNgcA3TYGADfJPj/fPiDfzehHIZhIOnBItygHzYkeIA4YnM3UKrcgBs1/PDD1yf4NKIXLv3cRGEnnw+E9IxjWxdXl9c2nAv7YzF09OnRIy3cgA838PM0PPTgK8fXNbT3zzYY9+/Hh0cHJy/cydEj1KnZIfrfE0jwjIPjxyRfYH+bwMnRIIVgb2xDmAsgrrz23IPx8tSDxrzJvSAYFPg7fEPshdEjLxjp1SB84DyEvGDqQSLcoAyG+F82qNj4BMm9IzacCtyj6/tggus2nAv7YKPkhdEg+gK53F8n1OnNItyAQKnhIfLUICfGFbz4AjGd+9fHJ0xE+ANMQPgHTEMkyhEh3I3fD4C7lzSYH0c1HI9KrIj6gw60iOA3VEfn/59EwBSKFSBgErzKESMPXIiH+Nc2FDT4gIfQ1w5IyytkuzWwlwAGNIsXNRyNgacPcLjgGwqg8Pg7fw888OnFIy+8ycUjdywP2w4An/gYgCzpxSMtvw500wyMr/h8g+cMaKzpxSMtvwpcrPgbfw6cr+ig1OnFIy2/CKDXDDzXK4Cv1OolItyAE8cMHK/HD+z3//7//v/+//7//v/+//7//v/+//7//v/+//7//v/+//7//v/+//7//v////7//v/+/////v/+//7//v/+//7//v///////////////////////////////////////////////////////////////////////////////////////7//v/+//7//v/+//7//v/+//7//v/+//7//v/+//7//v/+//7//v////7//v/+/////v/+//7//v/+//7//v5SEAcxFQQAGAB+2w4cn///////////////////////////////////////////////////////////////////////////////////+///////////////////////////////+//////////////////////////7///////////////////////////////////////////////////w==", "et": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADiY2JjYmNiZDgA4jQ0NHQ0NDhwAOJlaHDoZGJh4gDiNDQ0dDQ0OHAAPGLiYmLiZEWCAH7J0NDgw8HDfQAAAAAAAAAAAAAAAOCg3l7+/v7+AAAHBXt6f39/f/f35+Dw+Hh4PgDv7+cHDw8eHh58AADA9vT09PV15QAAT19fX9+fnY7d4f+gv8F9hYKe7h//hrqioiNozwAAAOCgQMCAUikAAAADAgEBACVKRaKAYFAQECAgGFEiAAMFBAQCAgwAAPDo/OTgwf/5AAAUPFj4vv2/e+Dy/oIAAIDAwHB3r6+fv/7/Oxg8AAAAgPh4eHz+fgAAISFgcGrvdze+zvb6+HwMAAAAHwsDAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "eg": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA7//////v///v/393f3d/d39///////////+///+//79/v//v/////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAAADHGSIVSpVKgc4wABVqhWqVarAOAahEKVSqFWqAAAAwDgEhAJBqAAAAAAAAAAAAICVCnF9fv8Lf0dvVaoF4miV8PD4/FWqVSqVKlWqFSJUoFSoVKpUqFKoQEAgIJAoiBRCkn9////3zx8fAQP9/v///////v78CDUKQRRBMoFEg1QoVCCJVKlSqVJKAQWRSpRIIFKoAAAAAICAgICAgAAAAAAAAAABDz8PDw8HAAAA/////f379wsXD/X//1Do/f7///////upVAqqwer////9QpFKkAoVqtX+/4AAAACAXL////8AAAAAAADw/P//AAAAAAAAAADA4AABAwMHBwcPDw//9fX379+/f7////7+/////////////39/f39/f37v/++/v//ff/f7+Pz8/v7//////wAAAAAAAACAgKAPDw8PDx8fPz9//////////f//+//+///+/fvXr9//////////////v/+//3/f3/+/v////////////v//fbp1q1evX79/+P3//f3//f37+/8f7+eoxev3/uX/////G2//////sLy+/////////wAAAIDA4PD4/LwAAAAAAAABAQEBf3//////////////9//+/v7+/v4/f39/Pz8/Hx8P//79+/ff/////3////3/+//v///+//79/v3+/f7/v3+/f/+//7////f37//v/+///9/j4cDAwICAgAAA//9/Px8HAQAAAP////////9/Hwf+7v//+///////AQMDAwMDBwcPD////////v/9//r8+Phw4ODgQMCADw8PBwcHAwMBAf/////+/f379+/9/37//v7/////v////////3//vwAAAAAAAACAgMABAAAAAAAAAAAA/38fAwAAAAAAAAAAAAAAAAAAAw8GCgoFBQQE/PTgAAAAAAD/PoHHzgAAAx/8wz/84AAHP/jHP/iAAAAA8I9+4AAAAAAAAAAAAAAAAAABH38PfoqKimIBAQEBoKCgoKpV+/fv/9jQ4PDg0NDY0MABAAAAAAAAAAAAwMCAgMDAwMDAwH9/f39/f39////g4ODg4ODw8PDw8PDw8PDw8PDw+Pj4+Pj4+Pj4+Pj//////z8HAQAA8PDw8ODg4IAAAAAAAAAAAAAAAAA=", "rom": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDAwMAAwAAAAACgoKAAAAAAAACgofCgofCgoABA8ZHg8DGx4EAAAcFR4EDxUHAAAAAA4YDB8WHwAAAAYECAAAAAAAAAACBAwMDAwEAgAACAQGBgYGBAgAAAQeDBIAAAAAAAAABAQfBAQAAAAAAAAAAAAABgQAAAAAAB8AAAAAAAAAAAAAAAAMAAAAAQECAgQECAgAAA4bGxsbGw4AAAAGHgYGBgYfgAAADhsDBgwbHwAAAA4bAw4DGw4AAAADBwsbH4MDAAAAHxgeGwMTHgAAAA4bGB4bGw4AAAAfGwMGBgwMAAAADhsbDhsbDgAAAA4bGw8DGw4AAAAAAAAMAAAMAAAAAAAADAAADAgAAAAGDBgMBgAAAAAAAB4AHgAAAAAAAAwGAwYMAAAAAAAOEwYMAAwAAAAOGRMVFROYDgAAAB4OCh8bG4AAAAAeGx4bGx4AAAAADxsYGBsOAAAAAB4bGxsbHgAAAAAfGB4YGx8AAAAAHxgeGBgcAAAAAA4bGB8bDwAAAAAbmx8bGxuAAAAAHgwMDAweAAAAAA8GBhYWHAAAAAAbGhweGx2AAAAAHBgYGBsfAAAAABEbGx8VFQAAAAAbnR0bGxkAAAAADhsbGxsOAAAAAB4bGx4YHAAAAAAOGxsbGw4DAAAAHhsbHhsdgAAAAA8ZHgcTHgAAAAAfDQwMDB4AAAAAG5sbGxsOAAAAABubCg4OBAAAAAAVlRUfDgoAAAAAGY8GBg8ZgAAAABmZjwYGDwAAAAAfGwYMGx8AAAAODAwMDAwMDgAAEBAICAQEAgIAAA4GBgYGBgYOAAAEDhsAAAAAAAAAAAAAAAAAAAAAAAwEAgAAAAAAAAAAAA4bDxsfgAAAGBgeGxsbHgAAAAAADhsYGw4AAAAHAw8bGxsPgAAAAAAOGx8YDwAAAAcMHwwMDB8AAAAAAA2bGxsPAwAAGBgeGxsbGwAAAAYAHgYGBh+AAAAGAB4GBgYGBgAAGBgbHhweG4AAAB4GBgYGBh+AAAAAAB4fFRUVAAAAAAAWGxsbGwAAAAAADhsbGw4AAAAAAB4bGxseGAAAAAANmxsbDwMAAAAAG46MDB4AAAAAAA8cDwOfAAAADAwfDAwNhwAAAAAAGxsbGw+AAAAAABsbDg4EAAAAAAAVlR8PCgAAAAAAHY8GDxuAAAAAABubGwoODAAAAAAfFgwbHwAAAAMGBgwGBgYDAAAABAQEBAQEBAAAGAwMBgwMDBgAAAAADRYAAAAAAAAAAAAAAAAAAA="};
+(function(){
+"use strict";
+const ub = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const mem = new Uint8Array(65536);
+const ET = ub(DATA.et), EG = ub(DATA.eg), ROMF = ub(DATA.rom);
+mem.set(ub(DATA.logo), 0x6800); mem.set(ub(DATA.screen), 0x7000); mem.set(ub(DATA.prog), 0x5000);
+mem[0x4889] = 1;
+
+const r16 = a => mem[a & 0xffff] | (mem[(a + 1) & 0xffff] << 8);
+const w16 = (a, v) => { mem[a & 0xffff] = v & 255; mem[(a + 1) & 0xffff] = (v >> 8) & 255; };
+const rndR = () => (Math.random() * 128) | 0;
+const setext = (ch, src) => { for (let i = 0; i < 10; i++) ET[ch * 10 + i] = mem[(src + i) & 0xffff]; };
+const ldir = (src, dst, n) => { for (let i = 0; i < n; i++) mem[(dst + i) & 0xffff] = mem[(src + i) & 0xffff]; };
+const onC = a => ((a >> 8) & 255) >= 0x41 || (a & 255) >= 0xF1;               // CP 41 / JR nc ; CP F1 / JR c
+const onS = a => ((((a >> 8) & 255) - 0x41) & 0x80) === 0 || ((((a & 255) - 0xF1) & 0x80) === 0); // JP p / JP m
+
+/* ---------- timing, NMI, sound ---------- */
+class Jump { constructor(a) { this.a = a; } }
+let nmi = false, speed = 1, actx = null, muted = false, origAccel = false;
+const U = 3; // ms per ROM sound unit
+function sleep(ms) {
+  return new Promise(res => setTimeout(res, ms * speed)).then(() => {
+    if (nmi) { nmi = false; throw new Jump(0x5000); }
+  });
+}
+const frame = () => sleep(16);
+const djnz = n => sleep(n * 0.85);
+function tone(f0, f1, ms) {
+  if (!actx || muted || ms <= 0) return;
+  const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+  o.type = "square"; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f1, t + ms / 1000);
+  g.gain.setValueAtTime(0.045, t); g.gain.setValueAtTime(0.045, t + ms / 1000 * 0.85); g.gain.linearRampToValueAtTime(0, t + ms / 1000);
+  o.connect(g).connect(actx.destination); o.start(t); o.stop(t + ms / 1000 + 0.02);
+}
+const pf = p => 24000 / (p + 20);
+async function snd(p1, p2, de) { const ms = de * U * speed; tone(pf(p1), pf(p2), ms); await sleep(de * U); }
+async function tune(addr, len) {                       // ROM 008F : mélodie T/O/notes
+  const s = String.fromCharCode(...mem.slice(addr, addr + len));
+  let T = 20, O = 2, i = 0;
+  const semi = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const num = () => { let n = ""; while (i < s.length && /\d/.test(s[i])) n += s[i++]; return +n; };
+  while (i < s.length) {
+    const c = s[i++];
+    if (c === "T") T = num(); else if (c === "O") O = num();
+    else if (c in semi) {
+      let st = semi[c]; if (s[i] === "+" || s[i] === "#") { st++; i++; }
+      const f = 440 * Math.pow(2, (O - 3) + (st - 9) / 12), ms = T * 8;
+      tone(f, f, ms * 0.9 * speed); await sleep(ms);
+    }
+  }
+}
+
+/* ---------- input ---------- */
+const held = new Set(), vdir = new Set(), keyq = [];
+let vfire = false;
+const has = (...k) => k.some(x => held.has(x));
+function joyV() {
+  const dn = has("ArrowDown", "Numpad1", "Numpad2", "Numpad3", "KeyA", "KeyS", "KeyD") || vdir.has("d") || vdir.has("dl") || vdir.has("dr");
+  const up = has("ArrowUp", "Numpad7", "Numpad8", "Numpad9", "KeyQ", "KeyW", "KeyE") || vdir.has("u") || vdir.has("ul") || vdir.has("ur");
+  return dn && !up ? 1 : up && !dn ? 2 : 0;
+}
+function joyH() {
+  const rt = has("ArrowRight", "Numpad9", "Numpad3", "KeyE", "KeyD") || vdir.has("ur") || vdir.has("dr");
+  const lt = has("ArrowLeft", "Numpad7", "Numpad1", "KeyQ", "KeyA") || vdir.has("ul") || vdir.has("dl");
+  return rt && !lt ? 1 : lt && !rt ? 2 : 0;
+}
+const joyFire = () => held.has("Space") || vfire;
+const inkey = () => keyq.length ? keyq.shift() : 0;   // ROM 00AA
+
+/* ---------- ROM helpers ---------- */
+function print(src, dst) { while (mem[src] !== 0x7f) mem[dst++] = mem[src++]; }   // 599E
+function cls() {                                                                    // ROM 009E (supposée)
+  for (let r = 1; r < 25; r++) for (let c = 0; c < 40; c++) { const a = 0x4000 + r * 80 + c * 2; mem[a] = 0x20; mem[a + 1] = c ? 0 : 0xF0; }
+}
+function digits(v) { v &= 0xffff; const neg = v & 0x8000; if (neg) v = (0x10000 - v) & 0xffff; return (neg ? "-" : "") + String(v); }
+
+/* ---------- 5D3B : adresse -> (ligne, colonne) avec bouclage ---------- */
+function wrap(HL) {
+  let off = (HL - 0x4000) & 0xffff, B = 0;
+  do { B = (B + 1) & 255; off = (off - 0x50) & 0xffff; } while (!(off & 0x8000));
+  off = (off + 0x50) & 0xffff;
+  let L = (off & 255) >> 1, H = (B - 1) & 255;
+  if (((H - 0x17) & 0x80) === 0) H = (H - 0x14) & 255;
+  else if ((H - 3) & 0x80) H = (H + 0x14) & 255;
+  if (L < 1) L = 0x24; else if (L >= 0x27) L = 3;
+  return (0x4000 + H * 0x50 + L * 2) & 0xffff;               // ROM 00A7
+}
+
+/* ---------- graphics definition routines ---------- */
+function r59AA() {
+  let hl = r16(0x570B) + mem[0x5700];
+  for (let a = 0x2D; a < 0x31; a++, hl += 10) setext(a, hl);
+  hl = r16(0x5702) + mem[0x5700];
+  for (let a = 0x32; a < 0x37; a++, hl += 10) setext(a, hl);
+  hl = 0x550B;
+  for (let a = 0x50; a < 0x54; a++, hl += 10) setext(a, hl);
+}
+function r59F8() {
+  let hl = 0x5533; for (let a = 0x37; a < 0x39; a++, hl += 10) setext(a, hl);
+  hl = 0x53B7; for (let a = 0x3C; a < 0x46; a++, hl += 10) setext(a, hl);
+}
+function r5A23() {
+  let hl = r16(0x5756), a = 0x29;
+  for (;;) {
+    setext(a, hl); hl += 10; a++;
+    if (a === 0x3D) break;
+    if (a === 0x2D || a === 0x31 || a === 0x35 || a === 0x39) hl += 0x50;
+  }
+  const v = r16(0x5756); w16(0x5756, v === 0x51AF ? 0x515F : v + 0x28);
+}
+function r5A6A() {
+  let hl = r16(0x5758);
+  for (let a = 0x21; a < 0x29; a++, hl += 0x1E) setext(a, hl);
+  const v = r16(0x5758); w16(0x5758, v === 0x555B ? 0x5547 : v + 1);
+}
+function glyphTops(v) {                     // 5786 / 586F : ligne haute des sprites
+  mem[0x538F] = v; mem[0x5399] = v;
+  let hl = 0x515F;
+  for (;;) { mem[hl] = v; if (hl === 0x538F) break; hl += 10; mem[hl] = v; hl += 0x1E; }
+}
+
+/* ---------- 575C : menu ---------- */
+async function r575C() {
+  mem[0x47FD] = 0; mem[0x4889] = 1;
+  for (let i = 0; i < 0x37; i++) mem[0x5714 + i] = 0;
+  glyphTops(0);
+  w16(0x5758, 0x5547); w16(0x5756, 0x515F);
+  r5A23();
+  ldir(0x6800, 0x4000, 0x7D0); mem[0x4001] = 0x80; mem[0x575A] = 0;
+  print(0x508E, 0x4696); print(0x50D1, 0x4736);
+  let k, mode;
+  for (;;) {
+    k = inkey();
+    if (k === 0x31) { mode = 2; break; }
+    if (k === 0x33) { mode = 0; break; }
+    if (k === 0x44 || k === 0x64) break;
+    if (!k) { r5A23(); r5A6A(); await djnz(0xA0); }
+  }
+  let force;
+  if (mode === undefined) { mem[0x575A] = 1; force = 0; }
+  else {
+    mem[0x5712] = mode;
+    for (let i = 0; i < 8; i++) { inkey(); await sleep(60); }
+    ldir(0x6800, 0x4000, 0x7D0); mem[0x4001] = 0x80;
+    print(0x5118, 0x46E6);
+    for (;;) {
+      k = inkey();
+      if (k >= 0x30 && k < 0x3A) break;
+      r5A23(); r5A6A(); await djnz(0xA0);
+    }
+    force = k - 0x30;
+  }
+  mem[0x5713] = force;
+  glyphTops(0xFF);
+  ldir(0x7300, 0x4050, 0x780); mem[0x4001] = 0x80;               // CALL 7F00
+  for (let a = 0x20, hl = 0x5020; a < 0x2B; a++, hl += 10) setext(a, hl);
+  for (let i = 0; i < 0x37; i++) mem[0x5714 + i] = 0x3F;
+  for (let i = 0; i < 5; i++) { mem[0x5714 + i * 11] = 0; mem[0x5715 + i * 11] = 0; }
+  r58D4();
+}
+
+/* ---------- 58D4 : nouvelle partie ---------- */
+function r58D4() {
+  for (let i = 0; i < 0x3A; i++) mem[0x56D7 + i] = 0;
+  mem[0x575B] = 1; mem[0x5704] = 3;
+  w16(0x570B, 0x515F); w16(0x5702, 0x5493);
+  r59AA(); r59F8();
+  mem[0x5710] = 0x3C;
+  for (let k = 0; k < 5; k++) w16(0x56E1 + 2 * k, 0x40AC + 12 * k);
+  [7, 6, 5, 4, 2].forEach((c, k) => mem[0x56EB + k] = c);
+  ldir(0x56E1, 0x56D7, 10);
+  w16(0x56FA, 0x4524); w16(0x56FC, 0x4524);
+  const f = mem[0x5713];
+  if (f === 1 || f === 4 || f === 7) { w16(0x5707, 0x4658); w16(0x5709, 0x4670); }
+  else if (f === 2 || f === 5 || f >= 8) { w16(0x5707, 0x4602); w16(0x5709, 0x4626); w16(0x5705, 0x4664); }
+  else w16(0x5705, 0x4664);
+  w16(0x5702, 0x5493);
+}
+
+/* ---------- 663B : montée du plateau ---------- */
+async function r663B() {
+  let de = 0x4780, bc = 0x50;
+  for (;;) {
+    ldir(0x40A0, 0x4050, 0x780);
+    ldir(0x7300, de, bc);
+    de -= 0x50; bc += 0x50;
+    if (de === 0x4000) break;
+    await sleep(28);
+  }
+  ldir(0x40A0, 0x4050, 0x50);
+}
+
+/* ---------- 62CB : ligne d'état ---------- */
+function putNum(hl, v, attr) {
+  const s = digits(v);
+  hl = (hl & 0xff00) | (((hl & 255) - 2 * s.length + 10) & 255);
+  for (const ch of s) { mem[hl++] = ch.charCodeAt(0); mem[hl++] = attr; }
+  return hl;
+}
+function r62CB() {
+  mem[0x4001] = 0; mem[0x4003] = 0xA2; mem[0x4009] = 0xC4; mem[0x4015] = 0xB3; mem[0x402D] = 0xE6; mem[0x403B] = 0xD5;
+  putNum(0x4008, r16(0x5714), 0);
+  for (let i = 0; i < 9; i++) { mem[0x4018 + 2 * i] = mem[0x5716 + i]; mem[0x4019 + 2 * i] = 0; }
+  putNum(0x402E, r16(0x56F0), 0);
+  mem[0x403C] = mem[0x575A] ? 0x44 : (mem[0x5713] + 0x30) & 255; mem[0x403D] = 0; mem[0x403F] = 0xA2;
+  mem[0x4045] = 0xD5; mem[0x4046] = (mem[0x575B] + 0x30) & 255; mem[0x4047] = 0; mem[0x4049] = 0xA2;
+}
+
+/* ---------- dessins de cases ---------- */
+function eraseCell(p) { mem[p] = 0xA3; mem[p + 1] = 1; mem[p + 2] = 0xA3; mem[p + 3] = 1; mem[p + 0x52] = 0x20; mem[p + 0x50] = 0x20; }
+function stone(p) {
+  const c = (mem[0x5710] + 0x80) & 255;
+  mem[p] = 0xAA; mem[p + 1] = 1; mem[p + 2] = 0xAA; mem[p + 3] = 1;
+  mem[p + 0x53] = 3; mem[p + 0x52] = c; mem[p + 0x51] = 3; mem[p + 0x50] = (c + 1) & 255;
+}
+function r5FC2() {
+  for (const a of [0x5705, 0x5707, 0x5709]) {
+    const hl = r16(a);
+    if (hl >> 8) { const c = mem[0x5704]; mem[hl] = 0xB7; mem[hl + 1] = c; mem[hl + 2] = 0xB8; mem[hl + 3] = c; }
+  }
+  mem[0x5704] = mem[0x5704] === 3 ? 1 : 3;
+}
+function r5CBE(bc) {
+  let hl = r16(0x56E1 + bc);
+  if (onC(hl)) eraseCell(hl);
+  hl = r16(0x56D7 + bc);
+  if (onC(hl)) {
+    const c = mem[0x56EB + (bc >> 1)];
+    mem[hl] = 0xAE; mem[hl + 1] = c; mem[hl + 2] = 0xAD; mem[hl + 3] = c;
+    mem[hl + 0x53] = c; mem[hl + 0x52] = 0xAF; mem[hl + 0x51] = c; mem[hl + 0x50] = 0xB0;
+  }
+  ldir(0x56D7 + bc, 0x56E1 + bc, 2);
+}
+async function r659B(t) {                                  // transformation en pierre
+  mem[t] = 0xC7; mem[t + 1] = 3; mem[t + 2] = 0xC6; mem[t + 3] = 3;
+  mem[t + 0x53] = 3; mem[t + 0x52] = 0xC8; mem[t + 0x51] = 3; mem[t + 0x50] = 0xC9;
+  for (let b = 0; b < 16; b++) {
+    let src = 0x541B + mem[0x5711];
+    for (let a = 0x46; a < 0x4A; a++, src += 10) { setext(a, src); await snd(2, 0x8C, 1); await snd(3, 0xF0, 1); }
+    let f = mem[0x5711] + 0x28; if (f >= 0x51) f = 0; mem[0x5711] = f;
+  }
+  stone(t);
+  return t + 0x50;
+}
+
+/* ---------- fins de partie ---------- */
+async function gameOver(addr, len) {
+  await djnz(1); await tune(addr, len);
+  await r6003();
+  mem[0x575B] = 0; r58D4();
+  throw new Jump(0x5004);
+}
+async function r5BB0(bc, hl) {                     // un monstre attrape le viking
+  const prev = r16(0x56D7 + bc);
+  if (onC(prev)) eraseCell(prev);
+  const p = (await r659B(hl)) - 0x50;
+  mem[p + 0x50] = 0xD3; mem[p + 0x51] = 2; mem[p + 0x52] = 0xD2; mem[p + 0x53] = 2;
+  mem[p + 3] = 2; mem[p + 2] = 0xD0; mem[p + 1] = 2; mem[p] = 0xD1;
+  r5CBE(bc);
+  await gameOver(0x5637, 0x26);
+}
+async function r5C22(bc, hl) {                     // un monstre atteint un trésor
+  w16(0x56D7 + bc, hl);
+  for (let i = 0; i < 10; i++) {
+    r5CBE(bc);
+    await snd(0x32, 0x50, 10);
+    r5FC2();
+    const p = r16(0x56D7 + bc); mem[p + 0x50] = 0x20; mem[p + 0x52] = 0x20;
+    await snd(0x14, 0x28, 0x14);
+  }
+  r5CBE(bc);
+  await gameOver(0x565C, 0x28);
+}
+
+/* ---------- 5AA1 : IA des monstres ---------- */
+async function r5AA1() {
+  if (mem[0x56FF]) { mem[0x56FF]--; mem[0x570E]++; return; }
+  mem[0x56FF] = 0; mem[0x5AA0] = 0x1E;
+  let iy = 0x5683 + (rndR() & 0x1F), g = 0;
+  while (mem[0x5600 | ((0xF2 + mem[iy]) & 255)] && g++ < 4000) iy = (iy + 1) & 0xffff;
+  const bc = (mem[iy] * 2) & 255;
+  let hl = r16(0x56E1 + bc);
+  mem[0x5A9F] = rndR() & 7;
+  for (;;) {
+    const a7 = mem[0x5A9F] & 7, d = a7 & 3;
+    if (d === 0) { let a = mem[0x5A9F] + 1; if (a >= 4) a = 1; mem[0x5A9F] = a; continue; }
+    const de = d === 1 ? 0x56 : d === 2 ? 0xA0 : 0x4A;
+    if (((mem[0x5713] - 6) & 0x80) === 0 && a7 >= 4) hl = (hl - de) & 0xffff; else hl = (hl + de) & 0xffff;
+    if (hl === r16(0x56E1 + bc)) { mem[0x570E]++; return; }
+    hl = wrap(hl);
+    const c = mem[hl];
+    if (c === 0xA3) { w16(0x56D7 + bc, hl); break; }
+    if (c === 0xB2) return r5BB0(bc, hl);
+    if (c === 0xB7) return r5C22(bc, hl);
+    if (c === 0xAE) { w16(0x56D7 + bc, r16(0x56E1 + bc)); break; }
+    let a = mem[0x5A9F] + 1; if (a >= 4) a = 1; mem[0x5A9F] = a;
+    hl = r16(0x56E1 + bc);
+    mem[0x5AA0]--; if (!mem[0x5AA0]) { mem[0x570E]++; return; }
+  }
+  await snd(0xC8, 0x32, 0x1E);
+  r5CBE(bc);
+  mem[0x570E]++;
+}
+
+/* ---------- 5D82 : le viking ---------- */
+async function r5F5F() {
+  const p = r16(0x56FC);
+  mem[p] = 0xB2; mem[p + 1] = 1; mem[p + 2] = 0xB3; mem[p + 3] = 2;
+  mem[p + 0x53] = 5; mem[p + 0x52] = 0xB5; mem[p + 0x51] = 5; mem[p + 0x50] = 0xB4;
+  r5FC2(); r62CB();
+  if (mem[0x56FC] !== mem[0x56FA]) { await snd(0x64, 0x14, 0x14); await snd(0x96, 0x19, 0x28); }
+  w16(0x56FA, r16(0x56FC));
+}
+async function r5F46() { eraseCell(r16(0x56FA)); await r5F5F(); }
+async function r5E52(hl) {                           // capture d'un monstre
+  const f = mem[0x5713];
+  if ((f === 3 || f === 4 || f === 5 || f === 9) && mem[hl + 1] !== 1) return r5F46();
+  const de = hl, p = r16(0x56FA);
+  w16(0x56FC, p);
+  if (mem[p] !== 0xB7) { mem[p] = 0xA3; mem[p + 1] = 1; mem[p + 2] = 0xA3; mem[p + 3] = 1; }
+  mem[p + 0x50] = 0x20; mem[p + 0x52] = 0x20;
+  w16(0x56FA, de);
+  await r659B(de);
+  r62CB();
+  let bc = 0x56D7, g = 0;
+  while (r16(bc) !== r16(0x56FA) && g++ < 2000) bc += 2;
+  const k = ((bc - 0x56D7) & 255) >> 1;
+  mem[0x5600 | ((0xF2 + k) & 255)] = 1;
+  w16(0x56F0, r16(0x56F0) + 15);
+  await r5F5F();
+}
+async function r5E31(hl, bc) {
+  const c = mem[hl];
+  if (c === 0xA3) { w16(0x56FC, bc); return r5F46(); }
+  if (c === 0xAE) return r5E52(hl);
+  if (c === 0xB7) { mem[0x570F] = 1; w16(0x56FC, bc); return r5F46(); }
+  w16(0x56FC, r16(0x56FA)); return r5F46();
+}
+async function r5D82() {
+  if (mem[0x5701]) { mem[0x5701]--; r5FC2(); return; }
+  mem[0x5701] = mem[0x570F];
+  let B = 0, hl = r16(0x56FA);
+  const demo = mem[0x575A];
+  const v = demo ? rndR() & 3 : joyV();
+  if (v) B = v === 1 ? 2 : 6;
+  const h = demo ? rndR() & 3 : joyH();
+  if (h) B = h === 1 ? (B - 1) & 255 : (B + 1) & 255;
+  const tbl = { 0: 0, 1: 0x56, 2: 0xA0, 3: 0x4A, 4: 0, 5: -0x4A, 6: -0xA0, 7: -0x56 };
+  if (!(B in tbl)) return r5F46();
+  hl = wrap((hl + tbl[B]) & 0xffff);
+  const bc = hl;
+  if (!mem[0x570F]) return r5E31(hl, bc);
+  const fire = joyFire() ? 1 : 0;
+  mem[0x570F] = fire;
+  if (!fire) return r5E31(hl, bc);
+  const c = mem[hl];
+  if (c === 0xA3) {                                  // traîne le trésor
+    const p = r16(0x56FA);
+    if (p === r16(0x5705)) w16(0x5705, bc); else if (p === r16(0x5707)) w16(0x5707, bc); else w16(0x5709, bc);
+    w16(0x56FC, bc); return r5F46();
+  }
+  if (c === 0xAE) return r5E52(hl);
+  w16(0x56FC, r16(0x56FA));
+}
+
+/* ---------- 6177 / 6222 : encerclement ---------- */
+async function r6222(iy, fl) {
+  const pos = r16(iy), h = pos + 1, A = mem[h];
+  for (let i = 0; i < 6; i++) {
+    mem[h] = 1; mem[h + 2] = 1; mem[h + 0x52] = 1; mem[h + 0x50] = 1;
+    await snd(0x23, 0x23, 0x14);
+    mem[h] = A; mem[h + 2] = A; mem[h + 0x52] = A; mem[h + 0x50] = A;
+    await r64D0();
+    await snd(0x32, 0x32, 0x14);
+  }
+  if (onS(pos)) stone(pos);
+  mem[fl] = 1;
+}
+async function r6177() {
+  if (mem[0x6176]) { mem[0x6176]--; return; }
+  mem[0x6176] = 4;
+  for (let k = 0; k < 5; k++) {
+    const iy = 0x56E1 + 2 * k, fl = 0x56F2 + k;
+    if (mem[fl]) continue;
+    const pos = r16(iy);
+    if (mem[wrap((pos + 0x4A) & 0xffff)] !== 0xAA) continue;
+    if (mem[wrap((pos + 0x56) & 0xffff)] !== 0xAA) continue;
+    if (mem[wrap((pos + 0xA0) & 0xffff)] !== 0xAA) continue;
+    if (mem[0x5713] >= 5) {
+      let a = wrap((pos - 0x4A) & 0xffff); if (mem[a] !== 0xAA) continue;
+      a = wrap((a - 0x10) & 0xffff); if (mem[a] !== 0xAA) continue;
+      a = wrap((a - 0x4A) & 0xffff); if (mem[a] !== 0xAA) continue;
+    }
+    await r6222(iy, fl);
+  }
+}
+
+/* ---------- 63E1 : monstre vulnérable ---------- */
+async function r6413() {
+  for (;;) {
+    mem[0x56FE] = 5;
+    if (mem[0x56F8] !== 0) break;
+    const a = rndR() & 7;
+    if (a === 6) continue;
+    mem[0x56F8] = a < 6 ? a : a - 3; break;
+  }
+  const idx = mem[0x56F8];
+  if (mem[(0x56F2 + ((idx - 1) & 255)) & 0xffff]) {
+    let n = idx + 1; if (n === 6) n = 1; mem[0x56F8] = n; mem[0x56FE] = 0; return;
+  }
+  const pos = r16(0x56E1 + (((idx - 1) * 2) & 255));
+  if (!onS(pos)) return;
+  const at = mem[pos + 1]; if (at !== 1) mem[0x63E0] = at;
+  const c = mem[0x63E0];
+  mem[pos + 1] = c; mem[pos + 3] = c; mem[pos + 0x53] = c; mem[pos + 0x51] = c;
+  await frame();
+  mem[pos + 1] = 1; mem[pos + 3] = 1; mem[pos + 0x53] = 1; mem[pos + 0x51] = 1;
+  mem[(0x56EB + ((idx - 1) & 255)) & 0xffff] = 1;
+}
+async function r63E1() {
+  const f = mem[0x5713];
+  if (!(f === 3 || f === 4 || f === 5 || f === 9)) {
+    let s = 0; for (let k = 0; k < 5; k++) s += mem[0x56F2 + k];
+    if (s >= 5) await r6413();
+    return;
+  }
+  const idx = mem[0x56F8];
+  if (mem[(0x56F2 + ((idx - 1) & 255)) & 0xffff]) {
+    let n = idx + 1; if (n === 6) n = 1; mem[0x56F8] = n; mem[0x56FE] = 0; return;
+  }
+  if (mem[0x56FE]) { mem[0x56FE]--; return; }
+  await r6413();
+}
+
+/* ---------- 64D0 : animation et vague suivante ---------- */
+async function r64D0() {
+  const a = mem[0x56F7] + 1;
+  if (a !== 3) mem[0x56F7] = a;
+  else { mem[0x56F7] = 0; let f = mem[0x5700] + 0x28; if (f >= 0x51) f = 0; mem[0x5700] = f; r59AA(); }
+  let s = 0; for (let k = 0; k < 5; k++) s = (s + mem[0x56F2 + k]) & 255;
+  if (s !== 5) return;
+  mem[0x5700] = 0;
+  if (r16(0x570B) === 0x533F) {                 // 6579 : victoire
+    const sc = r16(0x56F0);
+    await tune(0x5637, 0x26);
+    r58D4(); w16(0x56F0, sc);
+    throw new Jump(0x5004);
+  }
+  w16(0x570B, r16(0x570B) + 0x78); r59AA();
+  mem[0x575B]++;
+  for (let k = 0; k < 5; k++) w16(0x56E1 + 2 * k, 0x40AC + 12 * k);
+  [7, 6, 5, 4, 2].forEach((c, k) => mem[0x56EB + k] = c);
+  mem[0x5710] += 2;
+  for (let k = 0; k < 5; k++) { mem[0x56F2 + k] = 0; w16(0x56D7 + 2 * k, 0); }
+}
+
+/* ---------- 6003 : records ---------- */
+function r613B(pos, e) {
+  let hl = putNum(pos, r16(e), 4);
+  hl += 2;
+  for (let i = 0; i < 9; i++) { mem[hl++] = mem[e + 2 + i]; mem[hl++] = 1; }
+}
+async function r6003() {
+  const done = () => { mem[0x56F0] = 0; r62CB(); };
+  if (mem[0x575A]) return done();
+  const sc = r16(0x56F0);
+  if ((sc - r16(0x5740)) & 0x8000) return done();
+  cls();
+  let iy = 0x5714, B = 4;
+  while (((sc - r16(iy)) & 0x8000) && B > 0) { iy += 11; B--; }
+  for (let de = 0x5740, hl = 0x5735, n = B; n > 0; n--, de -= 11, hl -= 11) ldir(hl, de, 11);
+  w16(iy, sc);
+  const name = iy + 2;
+  for (let i = 0; i < 9; i++) mem[name + i] = 0x20;
+  for (let e = 0x5714, pos = 0x4294; e < 0x574B; e += 11, pos += 0xA0) r613B(pos, e);
+  print(0x56B2, 0x45F8);
+  let hl = 0x461C, p = name, n = 9;
+  while (n > 0) {
+    await sleep(30);                     // l'original vide le clavier ici (anti-rebond) ; la file d'événements n'en a pas besoin
+    let k = 0; while (!(k = inkey())) await sleep(20);
+    if (k === 13) { while (n-- > 0) mem[p++] = 0x20; break; }
+    if (k === 2) { if (p > name) { p--; hl -= 2; mem[p] = 0x20; mem[hl] = 0x20; n++; } continue; }
+    mem[p++] = k; mem[hl] = k; mem[hl + 1] = 5; hl += 2; n--;
+  }
+  done();
+}
+
+/* ---------- 5004 : boucle principale ---------- */
+async function main5004() {
+  await r663B();
+  r62CB();
+  // Durée minimale d'un tour : sur la machine, chaque tour paie aussi les rafraîchissements
+  // de l'écran par la ROM (6694 → 0053). Sans ce plancher, les tours sans son (monstre bloqué,
+  // viking immobile) ne durent qu'une image et le jeu accélère au fil du niveau.
+  // Rythme constant par monstre : l'original déplace un monstre vivant par tour, donc chacun
+  // accélère quand les autres sont pétrifiés. Par défaut, le tour monstre n'a lieu qu'à la
+  // proportion (monstres vivants / 5) ; la case « Accélération d'origine » rétablit l'original.
+  const TICK = 125;
+  let credit = 0;
+  for (;;) {
+    const t0 = performance.now();
+    await r63E1();
+    await r5D82();
+    await r6177();
+    await r64D0();
+    if (origAccel) await r5AA1();
+    else {
+      let alive = 0; for (let k = 0; k < 5; k++) if (!mem[0x56F2 + k]) alive++;
+      credit += alive / 5;
+      if (credit >= 1) { credit -= 1; await r5AA1(); }
+    }
+    const left = TICK * speed - (performance.now() - t0);
+    await sleep(Math.max(16 * speed, left) / speed);
+  }
+}
+async function machine() {
+  let entry = 0x5000;
+  for (;;) {
+    try {
+      if (entry === 0x5000) await r575C();
+      await main5004();
+    } catch (e) {
+      if (e instanceof Jump) { entry = e.a; continue; }
+      console.error(e); throw e;
+    }
+  }
+}
+
+/* ---------- EF9345 : rendu ---------- */
+const cv = document.getElementById("scr"), ctx = cv.getContext("2d");
+const img = ctx.createImageData(320, 250), px = new Uint32Array(img.data.buffer);
+const PAL = [[0,0,0],[232,44,44],[48,204,64],[240,228,52],[56,84,232],[222,52,222],[48,212,222],[240,240,240]]
+  .map(([r,g,b]) => (255 << 24) | (b << 16) | (g << 8) | r);
+function draw() {
+  for (let r = 0; r < 25; r++) {
+    let rowBg = 0;
+    for (let c = 0; c < 40; c++) {
+      const a = 0x4000 + r * 80 + c * 2, ch = mem[a], at = mem[a + 1];
+      let set = null, gi = 0, fg = PAL[at & 7], bg, dbl = false;
+      if (at & 0x80) { bg = (at >> 4) & 7; rowBg = bg; bg = PAL[bg]; if (ch & 0x80) { set = EG; gi = (ch & 0x7f) * 10; } }
+      else {
+        bg = PAL[rowBg];
+        if (ch & 0x80) { set = ET; gi = (ch & 0x7f) * 10; } else if (ch >= 0x20) { set = ROMF; gi = ch * 10; }
+        dbl = (at & 0x30) === 0x30;
+      }
+      let qx = 0, qy = 0;
+      if (dbl) {
+        let k = c; while (k > 0 && mem[a - (c - k) * 2 - 2] === ch && mem[a - (c - k) * 2 - 1] === at) k--;
+        qx = (c - k) & 1;
+        k = r; while (k > 0 && mem[a - (r - k) * 80 - 80] === ch && mem[a - (r - k) * 80 - 79] === at) k--;
+        qy = (r - k) & 1;
+      }
+      for (let y = 0; y < 10; y++) {
+        const row = set ? set[gi + (dbl ? ((y + qy * 10) >> 1) : y)] : 0;
+        let o = (r * 10 + y) * 320 + c * 8;
+        for (let x = 0; x < 8; x++) {
+          const bx = dbl ? ((x + qx * 8) >> 1) : x;
+          px[o++] = (row >> (7 - bx)) & 1 ? fg : bg;
+        }
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  requestAnimationFrame(draw);
+}
+
+/* ---------- UI ---------- */
+const stateEl = document.getElementById("state");
+setInterval(() => {
+  if (!started) return;
+  stateEl.textContent = `score ${r16(0x56F0)} · vague ${mem[0x575B]} · force ${mem[0x5713]} · pétrifiés ${[0,1,2,3,4].reduce((s,k)=>s+mem[0x56F2+k],0)}/5`;
+}, 400);
+let started = false;
+function boot() {
+  if (started) return; started = true;
+  try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; }
+  document.getElementById("boot").hidden = true;
+  cv.focus?.();
+  machine();
+}
+document.getElementById("start").addEventListener("click", boot);
+const GAMEKEYS = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"]);
+window.addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (!started) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); boot(); } return; }
+  if (e.target && (e.target.tagName === "SELECT")) return;
+  if (GAMEKEYS.has(e.code) || e.code.startsWith("Numpad")) e.preventDefault();
+  held.add(e.code);
+  if (e.key === "Escape") { nmi = true; return; }
+  if (e.repeat) return;
+  if (e.key === "Enter") keyq.push(13);
+  else if (e.key === "Backspace") { e.preventDefault(); keyq.push(2); }
+  else if (e.key.length === 1) keyq.push(e.key.charCodeAt(0) & 0x7f);
+  if (keyq.length > 16) keyq.shift();
+});
+window.addEventListener("keyup", e => held.delete(e.code));
+window.addEventListener("blur", () => held.clear());
+document.getElementById("nmi").addEventListener("click", () => { if (started) nmi = true; });
+const muteBtn = document.getElementById("mute");
+muteBtn.addEventListener("click", () => { muted = !muted; muteBtn.textContent = "Son : " + (muted ? "non" : "oui"); });
+const speedSel = document.getElementById("speed");
+speedSel.addEventListener("change", () => { speed = +speedSel.value; try { localStorage.setItem("vk-speed", speedSel.value); } catch (e) {} });
+try { const s = localStorage.getItem("vk-speed"); if (s) { speedSel.value = s; speed = +s; } } catch (e) {}
+const origCb = document.getElementById("orig");
+origCb.addEventListener("change", () => { origAccel = origCb.checked; });
+document.getElementById("padbtn").addEventListener("click", () => document.getElementById("pad").classList.toggle("show"));
+document.querySelectorAll(".hex button").forEach(b => {
+  const d = b.dataset.d;
+  b.addEventListener("pointerdown", e => { e.preventDefault(); vdir.add(d); b.setPointerCapture?.(e.pointerId); });
+  ["pointerup","pointercancel","lostpointercapture"].forEach(t => b.addEventListener(t, () => vdir.delete(d)));
+});
+const fireB = document.getElementById("fire");
+fireB.addEventListener("pointerdown", e => { e.preventDefault(); vfire = true; });
+["pointerup","pointercancel","pointerleave"].forEach(t => fireB.addEventListener(t, () => vfire = false));
+document.querySelectorAll(".keys3 button").forEach(b => b.addEventListener("click", () => {
+  if (!started) boot();
+  const k = b.dataset.k; keyq.push(k === "\r" ? 13 : k.charCodeAt(0));
+}));
+ldir(0x6800, 0x4000, 0x7D0);
+requestAnimationFrame(draw);
+window.__vk = { mem, ET, wrap };
+})();
+</script>
+
+</body>
+</html>
