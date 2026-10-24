@@ -57,8 +57,11 @@ label{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
 .pad{display:none;margin-top:14px;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .pad .keys3{order:3;flex-basis:100%}
 @media (max-width:520px){.overlay p{font-size:12px}.overlay .primary{font-size:14px;padding:10px 16px}}
-.hex{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);gap:8px}
-.hex button{padding:0;font-size:20px;touch-action:none;user-select:none;-webkit-user-select:none}
+.pad,.pad button{touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.hex{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,58px);gap:8px}
+.hex button{padding:0;font-size:22px;touch-action:none}
+.hex button.on,.fire.on{border-color:var(--gold);background:#3a4445}
+.fire.on{background:#a8352b}
 .fire{width:84px;height:84px;border-radius:50%;background:var(--rust);border-color:var(--rust);color:#fff;font-size:15px;touch-action:none;user-select:none;-webkit-user-select:none}
 .keys3{display:flex;gap:8px;flex-wrap:wrap}
 @media (pointer:coarse){.pad{display:flex}}
@@ -122,6 +125,7 @@ p{margin:0 0 10px;max-width:70ch}
         <button id="padbtn">Pavé tactile</button>
       </div>
       <div class="pad" id="pad">
+        <button class="fire" id="fire">FEU</button>
         <div class="hex" aria-label="Directions">
           <button data-d="ul" aria-label="Haut gauche">↖</button>
           <button data-d="u" aria-label="Haut">↑</button>
@@ -133,9 +137,9 @@ p{margin:0 0 10px;max-width:70ch}
         <div class="keys3">
           <button data-k="1">1</button><button data-k="3">3</button><button data-k="D">D</button>
           <button data-k="0">0</button><button data-k="5">5</button><button data-k="9">9</button>
-          <button data-k="\r">Entrée</button>
+          <button data-k="enter">Entrée</button>
+          <button data-k="back">Effacer</button>
         </div>
-        <button class="fire" id="fire">FEU</button>
       </div>
       <div class="state" id="state" aria-live="polite"></div>
     </section>
@@ -324,20 +328,28 @@ async function tune(addr, len) {                       // ROM 008F : mélodie T/
 }
 
 /* ---------- input ---------- */
-const held = new Set(), vdir = new Set(), keyq = [];
-let vfire = false;
-const has = (...k) => k.some(x => held.has(x));
+// Un appui bref (doigt ou touche) est mémorisé jusqu'à la prochaine lecture par le jeu :
+// sinon un tapotement plus court qu'un tour de jeu passe inaperçu.
+const held = new Set(), vdir = new Set(), keyq = [], latchK = new Set(), latchD = new Set();
+let vfire = false, latchF = false;
+const has = (...k) => k.some(x => held.has(x) || latchK.has(x));
+const vd = (...d) => d.some(x => vdir.has(x) || latchD.has(x));
 function joyV() {
-  const dn = has("ArrowDown", "Numpad1", "Numpad2", "Numpad3", "KeyA", "KeyS", "KeyD") || vdir.has("d") || vdir.has("dl") || vdir.has("dr");
-  const up = has("ArrowUp", "Numpad7", "Numpad8", "Numpad9", "KeyQ", "KeyW", "KeyE") || vdir.has("u") || vdir.has("ul") || vdir.has("ur");
+  const dn = has("ArrowDown", "Numpad1", "Numpad2", "Numpad3", "KeyA", "KeyS", "KeyD") || vd("d", "dl", "dr");
+  const up = has("ArrowUp", "Numpad7", "Numpad8", "Numpad9", "KeyQ", "KeyW", "KeyE") || vd("u", "ul", "ur");
   return dn && !up ? 1 : up && !dn ? 2 : 0;
 }
 function joyH() {
-  const rt = has("ArrowRight", "Numpad9", "Numpad3", "KeyE", "KeyD") || vdir.has("ur") || vdir.has("dr");
-  const lt = has("ArrowLeft", "Numpad7", "Numpad1", "KeyQ", "KeyA") || vdir.has("ul") || vdir.has("dl");
+  const rt = has("ArrowRight", "Numpad9", "Numpad3", "KeyE", "KeyD") || vd("ur", "dr");
+  const lt = has("ArrowLeft", "Numpad7", "Numpad1", "KeyQ", "KeyA") || vd("ul", "dl");
   return rt && !lt ? 1 : lt && !rt ? 2 : 0;
 }
-const joyFire = () => held.has("Space") || vfire;
+const joyFire = () => held.has("Space") || latchK.has("Space") || vfire || latchF;
+function readInput() {                       // lecture groupée, puis on oublie les appuis brefs
+  const r = { v: joyV(), h: joyH(), fire: joyFire() };
+  latchK.clear(); latchD.clear(); latchF = false;
+  return r;
+}
 const inkey = () => keyq.length ? keyq.shift() : 0;   // ROM 00AA
 
 /* ---------- ROM helpers ---------- */
@@ -614,16 +626,17 @@ async function r5D82() {
   mem[0x5701] = mem[0x570F];
   let B = 0, hl = r16(0x56FA);
   const demo = mem[0x575A];
-  const v = demo ? rndR() & 3 : joyV();
+  const inp = readInput();
+  const v = demo ? rndR() & 3 : inp.v;
   if (v) B = v === 1 ? 2 : 6;
-  const h = demo ? rndR() & 3 : joyH();
+  const h = demo ? rndR() & 3 : inp.h;
   if (h) B = h === 1 ? (B - 1) & 255 : (B + 1) & 255;
   const tbl = { 0: 0, 1: 0x56, 2: 0xA0, 3: 0x4A, 4: 0, 5: -0x4A, 6: -0xA0, 7: -0x56 };
   if (!(B in tbl)) return r5F46();
   hl = wrap((hl + tbl[B]) & 0xffff);
   const bc = hl;
   if (!mem[0x570F]) return r5E31(hl, bc);
-  const fire = joyFire() ? 1 : 0;
+  const fire = inp.fire ? 1 : 0;
   mem[0x570F] = fire;
   if (!fire) return r5E31(hl, bc);
   const c = mem[hl];
@@ -747,6 +760,9 @@ async function r6003() {
   for (let i = 0; i < 9; i++) mem[name + i] = 0x20;
   for (let e = 0x5714, pos = 0x4294; e < 0x574B; e += 11, pos += 0xA0) r613B(pos, e);
   print(0x56B2, 0x45F8);
+  // 60BC : l'original vide le clavier avant la saisie. On jette les touches frappées pendant la partie.
+  await sleep(150);
+  keyq.length = 0; latchK.clear(); latchD.clear(); latchF = false;
   let hl = 0x461C, p = name, n = 9;
   while (n > 0) {
     await sleep(30);                     // l'original vide le clavier ici (anti-rebond) ; la file d'événements n'en a pas besoin
@@ -760,6 +776,7 @@ async function r6003() {
 
 /* ---------- 5004 : boucle principale ---------- */
 async function main5004() {
+  keyq.length = 0;                          // pas de touches résiduelles en début de partie
   await r663B();
   r62CB();
   // Durée minimale d'un tour : sur la machine, chaque tour paie aussi les rafraîchissements
@@ -858,7 +875,7 @@ window.addEventListener("keydown", e => {
   if (!started) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); boot(); } return; }
   if (e.target && (e.target.tagName === "SELECT")) return;
   if (GAMEKEYS.has(e.code) || e.code.startsWith("Numpad")) e.preventDefault();
-  held.add(e.code);
+  held.add(e.code); latchK.add(e.code);
   if (e.key === "Escape") { nmi = true; return; }
   if (e.repeat) return;
   if (e.key === "Enter") keyq.push(13);
@@ -877,17 +894,28 @@ try { const s = localStorage.getItem("vk-speed"); if (s) { speedSel.value = s; s
 const origCb = document.getElementById("orig");
 origCb.addEventListener("change", () => { origAccel = origCb.checked; });
 document.getElementById("padbtn").addEventListener("click", () => document.getElementById("pad").classList.toggle("show"));
+const padEl = document.getElementById("pad");
+padEl.addEventListener("contextmenu", e => e.preventDefault());
 document.querySelectorAll(".hex button").forEach(b => {
   const d = b.dataset.d;
-  b.addEventListener("pointerdown", e => { e.preventDefault(); vdir.add(d); b.setPointerCapture?.(e.pointerId); });
-  ["pointerup","pointercancel","lostpointercapture"].forEach(t => b.addEventListener(t, () => vdir.delete(d)));
+  const up = () => { vdir.delete(d); b.classList.remove("on"); };
+  b.addEventListener("pointerdown", e => {
+    e.preventDefault(); vdir.add(d); latchD.add(d); b.classList.add("on");
+    try { b.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => b.addEventListener(t, up));
 });
 const fireB = document.getElementById("fire");
-fireB.addEventListener("pointerdown", e => { e.preventDefault(); vfire = true; });
-["pointerup","pointercancel","pointerleave"].forEach(t => fireB.addEventListener(t, () => vfire = false));
+const fireUp = () => { vfire = false; fireB.classList.remove("on"); };
+fireB.addEventListener("pointerdown", e => {
+  e.preventDefault(); vfire = true; latchF = true; fireB.classList.add("on");
+  try { fireB.setPointerCapture(e.pointerId); } catch (_) {}
+});
+["pointerup", "pointercancel", "lostpointercapture"].forEach(t => fireB.addEventListener(t, fireUp));
 document.querySelectorAll(".keys3 button").forEach(b => b.addEventListener("click", () => {
   if (!started) boot();
-  const k = b.dataset.k; keyq.push(k === "\r" ? 13 : k.charCodeAt(0));
+  const k = b.dataset.k;
+  keyq.push(k === "enter" ? 13 : k === "back" ? 2 : k.charCodeAt(0));
 }));
 ldir(0x6800, 0x4000, 0x7D0);
 requestAnimationFrame(draw);
