@@ -1,0 +1,25 @@
+{
+  "id": "/outils/pdf-annotator/",
+  "name": "Annoter un PDF — Signature & Tampons",
+  "short_name": "PDF Annotate",
+  "description": "Annoter, signer et tamponner des PDF.",
+  "lang": "fr",
+  "start_url": "/outils/pdf-annotator/",
+  "scope": "/outils/pdf-annotator/",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1e3a5f",
+  "icons": [
+    { "src": "/outils/pdf-annotator/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/outils/pdf-annotator/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/outils/pdf-annotator/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "file_handlers": [
+    {
+      "action": "/outils/pdf-annotator/",
+      "accept": { "application/pdf": [".pdf"] },
+      "icons": [ { "src": "/outils/pdf-annotator/icons/icon-192.png", "sizes": "192x192", "type": "image/png" } ],
+      "launch_type": "multiple-clients"
+    }
+  ]
+}
