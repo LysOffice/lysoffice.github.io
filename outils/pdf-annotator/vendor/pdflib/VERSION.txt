@@ -1,0 +1,11 @@
+pdf-lib 1.17.1
+
+Fichier vendorise : pdf-lib.esm.min.js, le build ESM
+(dist/pdf-lib.esm.min.js) du paquet npm pdf-lib@1.17.1. Octets identiques a
+la copie servie par cdnjs.
+
+sha256 : 72c052d97b4d5d9fa6cdbdcb7ad709f03d4ddb1122390cb3afeba4d88651d969
+
+Licence : MIT (voir LICENSE.txt).
+
+Seul importeur dans cet outil : site/modules/main.js.
