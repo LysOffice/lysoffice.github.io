@@ -1,10 +1,17 @@
 /* main.js — « Annoter un PDF » : dessin, texte, surligneur, gomme, signature,
- * tampons, puis export d'un PDF aplati. Port en module ES, sans rien en ligne
- * (CSP), de l'original de testssointra (C:\inetpub\PHP\outils). Ce qui change
- * par rapport a l'original : C:/Projet/docs/tools/DECISIONS.md, T-15. */
+ * tampons, puis export. L'export ajoute les annotations en SURCOUCHE vectorielle
+ * au PDF d'origine (texte, polices, poids conserves) ; il ne retombe sur un
+ * export aplati (une image par page) que si le PDF ne peut pas etre modifie
+ * (chiffre, endommage). Port en module ES, sans rien en ligne (CSP), de
+ * l'original de testssointra (C:\inetpub\PHP\outils). Ce qui change par rapport
+ * a l'original : C:/Projet/docs/tools/DECISIONS.md, T-15. */
 
 import * as pdfjsLib from "../vendor/pdfjs/pdf.min.mjs";
-import { PDFDocument } from "../vendor/pdflib/pdf-lib.esm.min.js";
+import {
+  PDFDocument, StandardFonts, LineCapStyle, LineJoinStyle, rgb,
+  pushGraphicsState, popGraphicsState, concatTransformationMatrix,
+  translate, rotateRadians, setLineJoin
+} from "../vendor/pdflib/pdf-lib.esm.min.js";
 import { initCatalogue, ouvrirCatalogue, getSignatureActive } from "./signatures.js";
 
 const BASE = (document.body && document.body.dataset && document.body.dataset.base) || "";
@@ -14,7 +21,7 @@ const $ = (id) => document.getElementById(id);
 
 // Version de l'outil : affichee sous le bouton d'export et au survol du logo,
 // pour verifier d'un coup d'oeil que le navigateur a charge la bonne version.
-const APP_VERSION='2.2 — tampons datés, opacité surligneur';
+const APP_VERSION='2.3 — export en surcouche (PDF d\'origine conservé)';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let pdfDoc=null, currentPage=1, totalPages=0;
@@ -22,6 +29,7 @@ let currentTool='draw', currentColor='#1c2a3a', currentSize=3;
 let currentOpacity=0.25;   // opacite du surligneur (0..1)
 let annotations=[], selectedStamp='approved';
 let pdfOrigName='';   // nom du fichier ouvert, repris a l'export
+let pdfOrigBytes=null; // octets du PDF ouvert, intacts : base de l'export en surcouche
 
 // selection & interaction
 let selectedAnnotId=null;
@@ -154,6 +162,7 @@ function selectStamp(s){selectedStamp=s;document.querySelectorAll('.stamp-item')
 // pdf.js takes ownership of the buffer it is given: hand it a fresh copy.
 async function ouvrirDocument(octets, nom){
   if(pdfDoc){try{await pdfDoc.destroy()}catch(e){}}
+  pdfOrigBytes=octets.slice();   // copie gardee avant que pdf.js ne s'approprie le tampon
   pdfDoc=await pdfjsLib.getDocument({data:octets,isEvalSupported:false}).promise;
   pdfOrigName=nom||'';
   document.title=(pdfOrigName?pdfOrigName+' — ':'')+'Annoter un PDF';
@@ -526,8 +535,10 @@ function redrawAnnotations(canvas,pageNum){
 // Dessine les annotations d'une page dans ctx, en coordonnees d'affichage
 // (ECHELLE_AFFICHAGE) : appliquer ctx.scale() avant pour une autre resolution.
 function dessinerAnnotations(ctx,pageNum,avecSelection){
-  annotations.filter(a=>a.page===pageNum).forEach(a=>{
-    const sel=avecSelection&&a.id===selectedAnnotId;
+  annotations.filter(a=>a.page===pageNum).forEach(a=>
+    dessinerAnnotation(ctx,a,avecSelection&&a.id===selectedAnnotId));
+}
+function dessinerAnnotation(ctx,a,sel){
     if(a.type==='path'){
       ctx.strokeStyle=a.color; ctx.lineWidth=a.size; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=1;
       ctx.beginPath(); a.path.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
@@ -554,7 +565,6 @@ function dessinerAnnotations(ctx,pageNum,avecSelection){
         drawSelBoxWithHandles(ctx,{x:a.x-2,y:a.y-a.size-2,w:tw+4,h:a.size+8});
       }
     }
-  });
 }
 
 // Un seul trait pour tout le passage : la transparence est uniforme (pas de
@@ -747,15 +757,205 @@ function telecharger(nom,octets){
   document.body.removeChild(lien);
   setTimeout(()=>{URL.revokeObjectURL(url)},60000);
 }
-// The output is a NEW document, one JPEG page per rendered page: nothing of the
-// source structure is carried over, so a damaged or rotated source cannot
-// yield a file that will not open.
+// Export : surcouche sur le PDF d'origine ; export aplati en secours seulement.
 async function exportPDF(){
   if(!pdfDoc){alert('Veuillez d\'abord ouvrir un PDF.');return}
   const boutons=[$('btnExport'),$('btnExportSide')];
   boutons.forEach(b=>b.disabled=true);
   try{
     deselectAnnot(true); // no selection box in the output
+    let bytes, aplati=false;
+    try{ bytes=await exporterSurcouche(); }
+    catch(err){
+      console.warn('[export] surcouche impossible, export aplati :',err);
+      bytes=await exporterAplati(); aplati=true;
+    }
+    telecharger(nomExport(),bytes);
+    if(aplati)alert('Ce PDF est protégé ou endommagé : il n\'a pas pu être complété tel quel.\n'+
+      'Il a été exporté en images (une par page) ; son texte n\'est plus sélectionnable.');
+  }catch(err){console.error(err);alert('Erreur export : '+err.message)}
+  finally{boutons.forEach(b=>b.disabled=false)}
+}
+
+// ─── EXPORT EN SURCOUCHE ─────────────────────────────────────────────────────
+// Le PDF d'origine est recharge tel quel (texte, polices, liens, formulaires
+// gardes) et chaque page recoit un flux de contenu de plus, dessine par-dessus.
+// Les annotations y sont vectorielles : traits et surligneur en chemins, texte
+// et tampons en vrai texte (polices standard PDF, non embarquees, donc legeres),
+// signatures en images. Une annotation que les polices standard ne savent pas
+// ecrire (ex. emoji) est posee en image PNG a 300 ppp, a sa place.
+//
+// Reperes : les annotations sont en px d'affichage (viewport pdf.js a
+// ECHELLE_AFFICHAGE, y vers le bas). L'inverse de viewport.transform ramene ces
+// px a l'espace utilisateur PDF (rotation de page et CropBox comprises), puis un
+// retournement vertical donne un repere « N » ou y monte : on y dessine en
+// (x, -y), a l'endroit tel que vu a l'ecran, quelle que soit la rotation.
+const POLICES_STANDARD={
+  'Segoe UI':StandardFonts.Helvetica, 'Arial':StandardFonts.Helvetica,
+  'Georgia':StandardFonts.TimesRoman, 'Consolas':StandardFonts.Courier,
+};
+const ECHELLE_SECOURS=3;   // annotation en image : 3 x ~100 ppp d'affichage ≈ 300 ppp
+const HAUTEUR_CAPITALES=.718;   // Helvetica-Bold : centre vertical des tampons
+
+async function exporterSurcouche(){
+  if(!pdfOrigBytes)throw new Error('octets d\'origine indisponibles');
+  // EncryptedPDFError si chiffre : on ne sait pas reecrire un PDF chiffre proprement
+  const doc=await PDFDocument.load(pdfOrigBytes,{updateMetadata:false});
+  const pages=doc.getPages();
+  if(pages.length!==totalPages)throw new Error(`pages : ${pages.length} ≠ ${totalPages}`);
+  await attendreImages();
+  const cx={doc, polices:new Map(), images:new Map()};
+  for(let i=1;i<=totalPages;i++){
+    const liste=annotations.filter(a=>a.page===i);
+    if(!liste.length)continue;
+    const vp=(await pdfDoc.getPage(i)).getViewport({scale:ECHELLE_AFFICHAGE});
+    const page=pages[i-1];
+    // Isole le contenu d'origine (q … Q) AVANT d'ajouter notre flux : une
+    // transformation laissee active par la page ne deplace pas la surcouche.
+    page.node.normalize();
+    page.pushOperators(pushGraphicsState(),
+      concatTransformationMatrix(...inverserMatrice(vp.transform)),
+      concatTransformationMatrix(1,0,0,-1,0,0),
+      setLineJoin(LineJoinStyle.Round));
+    for(const a of liste)await poserAnnotation(page,a,cx);   // ordre des calques garde
+    page.pushOperators(popGraphicsState());
+  }
+  return doc.save();
+}
+
+function inverserMatrice([a,b,c,d,e,f]){
+  const det=a*d-b*c;
+  if(!det)throw new Error('transformation de page non inversible');
+  return [d/det,-b/det,-c/det,a/det,(c*f-d*e)/det,(b*e-a*f)/det];
+}
+function couleurPdf(hex){
+  let h=String(hex||'#000').replace('#','');
+  if(h.length===3)h=h.split('').map(c=>c+c).join('');
+  const n=parseInt(h.slice(0,6),16)||0;
+  return rgb((n>>16&255)/255,(n>>8&255)/255,(n&255)/255);
+}
+async function policeStd(cx,nom){
+  if(!cx.polices.has(nom))cx.polices.set(nom,await cx.doc.embedFont(nom));
+  return cx.polices.get(nom);
+}
+function encodable(police,texte){
+  try{police.encodeText(texte);return true}catch(e){return false}
+}
+const arrondi=v=>Math.round(v*100)/100;
+function cheminSvg(path){
+  return path.map((p,i)=>(i?'L':'M')+arrondi(p.x)+' '+arrondi(p.y)).join(' ');
+}
+
+async function poserAnnotation(page,a,cx){
+  if(a.type==='path'||a.type==='highlight'){
+    if(!a.path||a.path.length<2)return;
+    const surl=a.type==='highlight';
+    // drawSvgPath retourne lui-meme l'axe y : les px d'affichage passent tels quels
+    page.drawSvgPath(cheminSvg(a.path),{
+      x:0, y:0, borderColor:couleurPdf(a.color),
+      borderWidth:surl?a.size*5:a.size,
+      borderLineCap:surl?LineCapStyle.Butt:LineCapStyle.Round,
+      ...(surl?{borderOpacity:a.opacity??.35}:{}),
+    });
+    return;
+  }
+  if(a.type==='text'){
+    const police=await policeStd(cx,POLICES_STANDARD[a.font]||StandardFonts.Helvetica);
+    if(!encodable(police,a.text))return poserEnImage(page,a,cx);
+    page.drawText(a.text,{x:a.x, y:-a.y, size:a.size, font:police, color:couleurPdf(a.color)});
+    return;
+  }
+  if(a.type==='stamp'){
+    const s=STAMPS[a.stamp];
+    if(!s)return poserEnImage(page,a,cx);
+    const police=await policeStd(cx,StandardFonts.HelveticaBold);
+    const lignes=a.lignes||s.lignes;
+    if(!lignes.every(l=>encodable(police,l)))return poserEnImage(page,a,cx);
+    const sc=a.scale||1, t=tailleTampon(a), w=t.w*sc, h=t.h*sc, fs=TAMPON_FONTE*sc;
+    const coul=couleurPdf(s.color), cadre={borderColor:coul, borderWidth:2.5, borderOpacity:.85,
+      ...(s.dash?{borderDashArray:[5,3]}:{})};
+    // canvas : rotate(-0.12) en y vers le bas = +0.12 dans le repere N (y vers le haut)
+    page.pushOperators(pushGraphicsState(), translate(a.x,-a.y), rotateRadians(.12));
+    page.drawRectangle({x:-w/2, y:-h/2, width:w, height:h, ...cadre});
+    page.drawRectangle({x:-w/2+4, y:-h/2+4, width:w-8, height:h-8, ...cadre});
+    lignes.forEach((l,i)=>{
+      const yMilieu=-(i-(lignes.length-1)/2)*TAMPON_INTERLIGNE*sc;
+      page.drawText(l,{x:-police.widthOfTextAtSize(l,fs)/2, y:yMilieu-HAUTEUR_CAPITALES*fs/2,
+        size:fs, font:police, color:coul, opacity:.85});
+    });
+    page.pushOperators(popGraphicsState());
+    return;
+  }
+  if(a.type==='image'){
+    const img=await imagePdf(cx,a.src);
+    page.drawImage(img,{x:a.x-a.w/2, y:-(a.y+a.h/2), width:a.w, height:a.h, opacity:.92});
+    return;
+  }
+}
+
+// Signature : PNG/JPEG embarque une seule fois par document, quel que soit
+// le nombre de poses. Autre format : repasse par un canvas en PNG.
+async function imagePdf(cx,src){
+  if(cx.images.has(src))return cx.images.get(src);
+  let img;
+  const m=/^data:image\/(png|jpe?g);base64,/i.exec(src);
+  if(m){
+    const bin=atob(src.slice(m[0].length)), oct=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)oct[i]=bin.charCodeAt(i);
+    img=m[1].toLowerCase()==='png'?await cx.doc.embedPng(oct):await cx.doc.embedJpg(oct);
+  }else{
+    const el=imageAnnot(src), c=document.createElement('canvas');
+    c.width=el.naturalWidth; c.height=el.naturalHeight;
+    c.getContext('2d').drawImage(el,0,0);
+    img=await cx.doc.embedPng(await (await versBlob(c,'image/png')).arrayBuffer());
+  }
+  cx.images.set(src,img);
+  return img;
+}
+
+// Secours : l'annotation seule, rendue en PNG transparent a ECHELLE_SECOURS,
+// posee exactement a sa place.
+async function poserEnImage(page,a,cx){
+  const b=boiteAnnotation(a);
+  const k=ECHELLE_SECOURS, c=document.createElement('canvas');
+  c.width=Math.max(1,Math.ceil(b.w*k)); c.height=Math.max(1,Math.ceil(b.h*k));
+  const g=c.getContext('2d');
+  g.scale(k,k); g.translate(-b.x,-b.y);
+  dessinerAnnotation(g,a,false);
+  const img=await cx.doc.embedPng(await (await versBlob(c,'image/png')).arrayBuffer());
+  c.width=0; c.height=0;
+  page.drawImage(img,{x:b.x, y:-(b.y+b.h), width:b.w, height:b.h});
+}
+// Boite englobante (px d'affichage), avec une marge pour l'epaisseur et l'antialiasing.
+function boiteAnnotation(a){
+  const m=4;
+  if(a.type==='path'||a.type==='highlight'){
+    const b=pathBounds(a), e=(a.type==='highlight'?a.size*5:a.size)/2+m;
+    return {x:b.x-e, y:b.y-e, w:b.w+2*e, h:b.h+2*e};
+  }
+  if(a.type==='text'){
+    if(!ctxMesure)ctxMesure=document.createElement('canvas').getContext('2d');
+    ctxMesure.font=`${a.size}px "${a.font}"`;
+    const w=ctxMesure.measureText(a.text).width;
+    return {x:a.x-m, y:a.y-a.size*1.25-m, w:w+2*m, h:a.size*1.75+2*m};
+  }
+  if(a.type==='stamp'){
+    const sc=a.scale||1, t=tailleTampon(a), w=t.w*sc, h=t.h*sc;
+    const co=Math.cos(.12), si=Math.sin(.12);
+    const W=w*co+h*si+2*m+4, H=w*si+h*co+2*m+4;
+    return {x:a.x-W/2, y:a.y-H/2, w:W, h:H};
+  }
+  return {x:a.x-a.w/2-m, y:a.y-a.h/2-m, w:a.w+2*m, h:a.h+2*m};
+}
+function versBlob(canvas,type){
+  return new Promise((ok,ko)=>canvas.toBlob(b=>b?ok(b):ko(new Error('rendu '+type+' vide')),type));
+}
+
+// ─── EXPORT APLATI (secours) ─────────────────────────────────────────────────
+// The output is a NEW document, one JPEG page per rendered page: nothing of the
+// source structure is carried over, so a damaged or encrypted source cannot
+// yield a file that will not open.
+async function exporterAplati(){
     const sortie=await PDFDocument.create();
     const containers=document.querySelectorAll('.page-container');
     for(let i=0;i<containers.length;i++){
@@ -773,10 +973,7 @@ async function exportPDF(){
       const vue=page.getViewport({scale:1}); // points, rotation included
       sortie.addPage([vue.width,vue.height]).drawImage(img,{x:0,y:0,width:vue.width,height:vue.height});
     }
-    const bytes=await sortie.save();
-    telecharger(nomExport(),bytes);
-  }catch(err){console.error(err);alert('Erreur export : '+err.message)}
-  finally{boutons.forEach(b=>b.disabled=false)}
+    return sortie.save();
 }
 
 // ─── IMPRESSION ──────────────────────────────────────────────────────────────
