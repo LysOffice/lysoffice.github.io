@@ -12,7 +12,7 @@ Ouvrez un PDF, annotez-le, signez-le, tamponnez-le, puis exportez ou imprimez. A
 
 - 📂 **Ouverture facile** : glisser-déposer, bouton « Ouvrir un PDF », lien direct (`?pdf=…`) ou « Ouvrir avec » depuis l'Explorateur Windows
 - ✏️ **Dessin à main levée** avec 8 couleurs et une épaisseur de trait réglable
-- 🔤 **Zones de texte** : police et taille modifiables après coup
+- 🔤 **Zones de texte** sur plusieurs lignes (`Maj + Entrée`) : police et taille modifiables après coup
 - 🖍️ **Surligneur** à opacité réglable
 - 🧽 **Gomme** pour effacer une annotation
 - 🖱️ **Sélection** : déplacer, redimensionner ou supprimer chaque annotation
@@ -39,6 +39,8 @@ Ouvrez un PDF, annotez-le, signez-le, tamponnez-le, puis exportez ou imprimez. A
 | `P`                 | Tampon                        |
 | `Suppr` / `Retour`  | Supprimer la sélection        |
 | `Échap`             | Désélectionner                |
+| `Entrée`            | Valider un texte en cours de saisie |
+| `Maj + Entrée`      | Nouvelle ligne dans un texte  |
 | `Ctrl + Z`          | Annuler                       |
 | `Ctrl + P`          | Imprimer le PDF annoté        |
 
@@ -83,7 +85,7 @@ Depuis Chrome ou Edge, cliquez sur l'icône d'installation dans la barre d'adres
 ## 🧭 Utilisation
 
 1. **Ouvrez** un PDF
-2. **Choisissez un outil** dans la barre du haut, puis une couleur et une épaisseur
+2. **Choisissez un outil** dans la barre du haut (l'outil Sélection est actif à l'ouverture), puis une couleur et une épaisseur
 3. **Annotez** la page directement
 4. **Signez** : créez une signature une fois, elle reste disponible dans le catalogue
 5. **Tamponnez** : choisissez la date, puis le tampon, et cliquez sur la page

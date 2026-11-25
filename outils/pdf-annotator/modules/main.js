@@ -21,11 +21,11 @@ const $ = (id) => document.getElementById(id);
 
 // Version de l'outil : affichee sous le bouton d'export et au survol du logo,
 // pour verifier d'un coup d'oeil que le navigateur a charge la bonne version.
-const APP_VERSION='2.3 — export en surcouche (PDF d\'origine conservé)';
+const APP_VERSION='2.4 — sélection par défaut, texte multiligne';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let pdfDoc=null, currentPage=1, totalPages=0;
-let currentTool='draw', currentColor='#1c2a3a', currentSize=3;
+let currentTool='select', currentColor='#1c2a3a', currentSize=3;
 let currentOpacity=0.25;   // opacite du surligneur (0..1)
 let annotations=[], selectedStamp='approved';
 let pdfOrigName='';   // nom du fichier ouvert, repris a l'export
@@ -102,11 +102,23 @@ const HR = 9; // half-size of a resize handle in canvas px
 function getAnnotBounds(a) {
   if (a.type==='image') return {x:a.x-a.w/2, y:a.y-a.h/2, w:a.w, h:a.h};
   if (a.type==='stamp') return cadreTampon(a);
-  if (a.type==='text') {
-    const approxW = a.text.length * a.size * 0.55;
-    return {x:a.x, y:a.y-a.size, w:approxW, h:a.size};
-  }
+  if (a.type==='text') return cadreTexte(a);
   return null;
+}
+
+// Texte multiligne (Maj+Entree a la saisie) : une ligne par '\n', interligne
+// 1,2 x la taille. (a.x, a.y) reste la ligne de base de la premiere ligne.
+const INTERLIGNE_TEXTE=1.2;
+const lignesTexte=a=>String(a.text).split('\n');
+function largeurTexte(a){
+  if(!ctxMesure)ctxMesure=document.createElement('canvas').getContext('2d');
+  ctxMesure.font=`${a.size}px "${a.font}"`;
+  return Math.max(...lignesTexte(a).map(l=>ctxMesure.measureText(l).width));
+}
+// Cadre de selection / poignees / zone cliquable d'un texte
+function cadreTexte(a){
+  const h=a.size+(lignesTexte(a).length-1)*a.size*INTERLIGNE_TEXTE;
+  return {x:a.x-2, y:a.y-a.size-2, w:largeurTexte(a)+4, h:h+8};
 }
 
 // Returns which handle is hit, or null
@@ -242,6 +254,7 @@ async function renderAllPages(){
     base.width=vp.width; base.height=vp.height;
     const over=document.createElement('canvas');
     over.className='overlay-canvas'; over.width=vp.width; over.height=vp.height;
+    over.style.cursor=currentTool==='select'?'default':'crosshair';
     wrap.appendChild(base); wrap.appendChild(over); viewer.appendChild(wrap);
     await page.render({canvasContext:base.getContext('2d'),viewport:vp}).promise;
     setupCanvas(over,i); redrawPage(i);
@@ -253,7 +266,7 @@ async function renderAllPages(){
 function hitAnnot(a,p){
   if(a.type==='stamp')     {const b=cadreTampon(a);return p.x>=b.x-5&&p.x<=b.x+b.w+5&&p.y>=b.y-5&&p.y<=b.y+b.h+5}
   if(a.type==='image')     return p.x>=a.x-a.w/2-6&&p.x<=a.x+a.w/2+6&&p.y>=a.y-a.h/2-6&&p.y<=a.y+a.h/2+6;
-  if(a.type==='text')      {const w=a.text.length*a.size*.55;return p.x>=a.x-4&&p.x<=a.x+w+4&&p.y>=a.y-a.size-4&&p.y<=a.y+6}
+  if(a.type==='text')      {const b=cadreTexte(a);return p.x>=b.x-2&&p.x<=b.x+b.w+2&&p.y>=b.y-2&&p.y<=b.y+b.h}
   if(a.type==='path'||a.type==='highlight') return a.path.some(q=>Math.hypot(q.x-p.x,q.y-p.y)<18);
   return false;
 }
@@ -559,11 +572,8 @@ function dessinerAnnotation(ctx,a,sel){
       if(sel)drawSelBoxWithHandles(ctx,{x:a.x-a.w/2,y:a.y-a.h/2,w:a.w,h:a.h});
     } else if(a.type==='text'){
       ctx.fillStyle=a.color; ctx.font=`${a.size}px "${a.font}"`; ctx.globalAlpha=1;
-      ctx.fillText(a.text,a.x,a.y);
-      if(sel){
-        const tw=ctx.measureText(a.text).width;
-        drawSelBoxWithHandles(ctx,{x:a.x-2,y:a.y-a.size-2,w:tw+4,h:a.size+8});
-      }
+      lignesTexte(a).forEach((l,i)=>ctx.fillText(l,a.x,a.y+i*a.size*INTERLIGNE_TEXTE));
+      if(sel)drawSelBoxWithHandles(ctx,cadreTexte(a));
     }
 }
 
@@ -628,21 +638,33 @@ function showFloatingInput(cx,cy,pos,pageNum){
   floatingInput.style.left=Math.min(cx,vw-220)+'px';
   floatingInput.style.top=Math.min(cy,vh-60)+'px';
   floatingInput.value='';
+  ajusterSaisie();
   requestAnimationFrame(()=>floatingInput.focus());
 }
+// Entree : valide ; Maj+Entree : nouvelle ligne (comportement natif du textarea)
 floatingInput.addEventListener('keydown',e=>{
-  if(e.key==='Enter'){e.preventDefault();confirmText()}
+  if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();confirmText()}
   if(e.key==='Escape'){textInputOpen=false;floatingInput.hidden=true}
 });
+// La zone grandit avec le texte (field-sizing:content dans la feuille ;
+// repli pour les navigateurs qui ne le gerent pas).
+function ajusterSaisie(){
+  if(CSS.supports&&CSS.supports('field-sizing','content'))return;
+  floatingInput.style.height='auto'; floatingInput.style.width='auto';
+  floatingInput.style.height=floatingInput.scrollHeight+4+'px';
+  floatingInput.style.width=Math.max(130,floatingInput.scrollWidth+24)+'px';
+}
+floatingInput.addEventListener('input',ajusterSaisie);
 floatingInput.addEventListener('blur',()=>{
   setTimeout(()=>{if(textInputOpen&&document.activeElement!==floatingInput)confirmText()},200);
 });
 function confirmText(){
   if(!textInputOpen)return; textInputOpen=false; floatingInput.hidden=true;
-  const text=floatingInput.value.trim();
+  // fins de ligne normalisees, espaces de fin de ligne et lignes vides aux bords retires
+  const text=floatingInput.value.replace(/\r\n?/g,'\n').split('\n').map(l=>l.replace(/\s+$/,'')).join('\n').replace(/^\n+|\n+$/g,'');
   if(text&&pendingPos){
     const fontSize=parseInt($('textSizeRange').value);
-    const id=addAnnot({type:'text',page:pendingPage,x:pendingPos.x,y:pendingPos.y,text,color:currentColor,size:fontSize,font:$('textFont').value,label:'Texte: '+text.slice(0,14)});
+    const id=addAnnot({type:'text',page:pendingPage,x:pendingPos.x,y:pendingPos.y,text,color:currentColor,size:fontSize,font:$('textFont').value,label:'Texte: '+text.replace(/\n/g,' ⏎ ').slice(0,14)});
     redrawPage(pendingPage); selectAnnot(id); setTool('select');
   }
 }
@@ -861,8 +883,10 @@ async function poserAnnotation(page,a,cx){
   }
   if(a.type==='text'){
     const police=await policeStd(cx,POLICES_STANDARD[a.font]||StandardFonts.Helvetica);
-    if(!encodable(police,a.text))return poserEnImage(page,a,cx);
-    page.drawText(a.text,{x:a.x, y:-a.y, size:a.size, font:police, color:couleurPdf(a.color)});
+    const lignes=lignesTexte(a);
+    if(!lignes.every(l=>encodable(police,l)))return poserEnImage(page,a,cx);
+    lignes.forEach((l,i)=>{ if(l)page.drawText(l,{x:a.x, y:-(a.y+i*a.size*INTERLIGNE_TEXTE),
+      size:a.size, font:police, color:couleurPdf(a.color)}); });
     return;
   }
   if(a.type==='stamp'){
@@ -934,10 +958,8 @@ function boiteAnnotation(a){
     return {x:b.x-e, y:b.y-e, w:b.w+2*e, h:b.h+2*e};
   }
   if(a.type==='text'){
-    if(!ctxMesure)ctxMesure=document.createElement('canvas').getContext('2d');
-    ctxMesure.font=`${a.size}px "${a.font}"`;
-    const w=ctxMesure.measureText(a.text).width;
-    return {x:a.x-m, y:a.y-a.size*1.25-m, w:w+2*m, h:a.size*1.75+2*m};
+    const w=largeurTexte(a), n=lignesTexte(a).length;
+    return {x:a.x-m, y:a.y-a.size*1.25-m, w:w+2*m, h:a.size*1.75+(n-1)*a.size*INTERLIGNE_TEXTE+2*m};
   }
   if(a.type==='stamp'){
     const sc=a.scale||1, t=tailleTampon(a), w=t.w*sc, h=t.h*sc;

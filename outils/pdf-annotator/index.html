@@ -20,10 +20,10 @@
   <div class="logo">PDF<span>Annotate</span></div>
   <div class="toolbar">
     <div class="tg">
-      <button type="button" class="tool-btn" id="btnSelect" data-tool="select" title="[V] Sélection/Déplacement/Redimensionnement">
+      <button type="button" class="tool-btn active" id="btnSelect" data-tool="select" title="[V] Sélection/Déplacement/Redimensionnement">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-7 1-4 7z"/></svg> Sélection
       </button>
-      <button type="button" class="tool-btn active" id="btnDraw" data-tool="draw" title="[D] Dessin">
+      <button type="button" class="tool-btn" id="btnDraw" data-tool="draw" title="[D] Dessin">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17L17 3l4 4L7 21z"/></svg> Dessin
       </button>
       <button type="button" class="tool-btn" id="btnText" data-tool="text" title="[T] Texte">
@@ -219,7 +219,7 @@
   <button type="button" id="nextPage">▶</button>
 </div>
 
-<input type="text" id="floatingInput" placeholder="Tapez votre texte…" hidden>
+<textarea id="floatingInput" rows="1" placeholder="Tapez votre texte… (Maj+Entrée : nouvelle ligne)" title="Entrée : valider · Maj+Entrée : nouvelle ligne · Échap : annuler" hidden></textarea>
 
 <div class="lb-overlay" id="loadingBanner" hidden>
   <div class="lb-box">
