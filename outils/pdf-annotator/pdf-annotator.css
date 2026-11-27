@@ -138,6 +138,9 @@ header{background:var(--header-bg);border-bottom:1px solid var(--header-border);
 .page-container{position:relative;box-shadow:var(--shadow-lg);border-radius:2px;border:1px solid var(--border)}
 .page-container canvas{display:block;border-radius:2px}
 .overlay-canvas{position:absolute;top:0;left:0;pointer-events:all;border-radius:2px}
+/* champs de formulaire (calque pdf.js) : au-dessus des annotations, actifs avec l'outil Selection seulement */
+.page-container .annotationLayer{z-index:2}
+#viewer:not(.formulaires-actifs) .annotationLayer section{pointer-events:none}
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;text-align:center}
 .empty-state .big-icon{font-size:52px;opacity:.22}
 .empty-state h2{font-size:17px;font-weight:500;color:var(--text-2)}

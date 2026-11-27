@@ -12,6 +12,7 @@ Ouvrez un PDF, annotez-le, signez-le, tamponnez-le, puis exportez ou imprimez. A
 
 - 📂 **Ouverture facile** : glisser-déposer, bouton « Ouvrir un PDF », lien direct (`?pdf=…`) ou « Ouvrir avec » depuis l'Explorateur Windows
 - ✏️ **Dessin à main levée** avec 8 couleurs et une épaisseur de trait réglable
+- 📝 **Formulaires PDF** : les champs (texte, cases à cocher, boutons radio, listes) sont remplissables avec l'outil Sélection ; les valeurs sont enregistrées dans le PDF exporté, qui reste un formulaire
 - 🔤 **Zones de texte** sur plusieurs lignes (`Maj + Entrée`) : contenu, police et taille modifiables après coup (double-clic sur le texte)
 - 🖍️ **Surligneur** à opacité réglable
 - 🧽 **Gomme** pour effacer une annotation
@@ -95,6 +96,7 @@ Depuis Chrome ou Edge, cliquez sur l'icône d'installation dans la barre d'adres
 
 ## 💡 Bon à savoir
 
+- **Formulaires** : les champs ne réagissent qu'avec l'outil **Sélection** ; avec les autres outils, on dessine, écrit ou tamponne par-dessus sans les activer. Les scripts de formulaire (calculs, formats, validations) ne sont pas exécutés. Un champ à fond opaque recouvre ce qui est dessiné dessous dans le PDF exporté (dans un PDF, les champs s'affichent toujours au-dessus du contenu de la page).
 - **Saisie de texte** : un clic ailleurs sur la page valide le texte en cours ; `Échap` l'annule. Pour modifier un texte déjà posé : double-clic dessus, clic dessus avec l'outil Texte, `Entrée`, ou le bouton « Modifier le texte ». Vider un texte le supprime.
 - **Fermeture** : s'il reste des annotations non exportées, le navigateur (ou la fenêtre de l'application installée) demande confirmation avant de fermer, de recharger ou de quitter la page, et l'ouverture d'un autre PDF est aussi confirmée. Le texte de la boîte est imposé par le navigateur.
 - **Export en surcouche** : le PDF d'origine est conservé tel quel (texte, polices, liens, formulaires) et les annotations sont ajoutées par-dessus, en vectoriel : traits et surligneur en tracés, textes et tampons en vrai texte (polices standard PDF : Helvetica, Times, Courier, non embarquées), signatures en images. Le fichier reste léger et son texte reste sélectionnable et indexable.
@@ -120,7 +122,7 @@ PDFlys/
 │   ├── main.js             # Outils d'annotation, export, impression
 │   └── signatures.js       # Catalogue de signatures
 └── vendor/                 # Bibliothèques embarquées (aucun CDN)
-    ├── pdfjs/              # Affichage des PDF
+    ├── pdfjs/              # Affichage des PDF (+ annotation_layer.css : champs de formulaire)
     └── pdflib/             # Génération du PDF exporté
 ```
 
@@ -129,7 +131,7 @@ PDFlys/
 ## 🛠️ Technologies
 
 - **JavaScript natif** en modules ES, sans framework ni build
-- [PDF.js](https://mozilla.github.io/pdf.js/) **4.10.38** pour le rendu des PDF
+- [PDF.js](https://mozilla.github.io/pdf.js/) **4.10.38** pour le rendu des PDF, les champs de formulaire et l'écriture de leurs valeurs (licence Apache-2.0)
 - [pdf-lib](https://pdf-lib.js.org/) **1.17.1** pour la génération du PDF exporté (licence MIT)
 - Aucune ressource externe : tout est embarqué dans `vendor/`
 

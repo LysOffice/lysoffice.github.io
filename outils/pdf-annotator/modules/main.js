@@ -21,7 +21,7 @@ const $ = (id) => document.getElementById(id);
 
 // Version de l'outil : affichee sous le bouton d'export et au survol du logo,
 // pour verifier d'un coup d'oeil que le navigateur a charge la bonne version.
-const APP_VERSION='2.5 — texte modifiable, validation au clic, alerte avant fermeture';
+const APP_VERSION='2.6 — formulaires PDF remplissables';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let pdfDoc=null, currentPage=1, totalPages=0;
@@ -43,6 +43,8 @@ let isDrawing=false, currentPath=[];
 // text input
 let textInputOpen=false, pendingPos=null, pendingPage=null;
 let idEnEdition=null;   // texte existant en cours de modification (masque pendant la saisie)
+let revFormulaire=0, revFormulaireSauvee=0;   // saisies dans les champs de formulaire (total / au dernier export)
+let champsFormulaire=null;   // pdfDoc.getFieldObjects() : groupes de boutons radio, reinitialisation
 let empreinteSauvee='[]';   // annotations au dernier export / a l'ouverture (alerte de fermeture)
 
 // taille maxi d'une signature a sa pose (px du canvas d'affichage)
@@ -149,11 +151,17 @@ function setTool(t){
   currentTool=t;
   document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));
   document.querySelectorAll('.overlay-canvas').forEach(c=>c.style.cursor=t==='select'?'default':'crosshair');
+  majChampsActifs();
   if(t!=='select')deselectAnnot(false);
   majOpacite();
 }
 // Curseur d'opacite : visible avec l'outil Surligneur, ou quand un passage de
 // surligneur est selectionne (il modifie alors ce passage).
+// Champs de formulaire cliquables avec l'outil Selection seulement : avec les
+// autres outils, on dessine / ecrit / tamponne par-dessus sans les activer.
+function majChampsActifs(){
+  $('viewer')?.classList.toggle('formulaires-actifs',currentTool==='select');
+}
 function majOpacite(){
   const a=annotations.find(x=>x.id===selectedAnnotId);
   const surSel=a&&a.type==='highlight';
@@ -186,6 +194,8 @@ async function ouvrirDocument(octets, nom){
   $('pageNav').hidden=false;
   updateAnnotList();
   empreinteSauvee=empreinteAnnotations();
+  revFormulaire=revFormulaireSauvee=0;
+  champsFormulaire=await pdfDoc.getFieldObjects().catch(()=>null);
   await renderAllPages();
 }
 async function loadPDF(f){
@@ -261,11 +271,48 @@ async function renderAllPages(){
     over.className='overlay-canvas'; over.width=vp.width; over.height=vp.height;
     over.style.cursor=currentTool==='select'?'default':'crosshair';
     wrap.appendChild(base); wrap.appendChild(over); viewer.appendChild(wrap);
-    await page.render({canvasContext:base.getContext('2d'),viewport:vp}).promise;
+    // ENABLE_FORMS : les champs de formulaire ne sont pas peints dans le canvas,
+    // le calque HTML ci-dessous les affiche (sans doublon) et les rend remplissables.
+    await page.render({canvasContext:base.getContext('2d'),viewport:vp,
+      annotationMode:pdfjsLib.AnnotationMode.ENABLE_FORMS}).promise;
+    await rendreChamps(page,vp,wrap);
     setupCanvas(over,i); redrawPage(i);
   }
+  majChampsActifs();
   updatePageInfo();
 }
+
+// ─── FORMULAIRES ─────────────────────────────────────────────────────────────
+// Calque pdf.js (AnnotationLayer) limite aux widgets (champs texte, cases,
+// boutons radio, listes) ; place AU-DESSUS du canvas d'annotations. Les valeurs
+// saisies vont dans pdfDoc.annotationStorage ; pdfDoc.saveDocument() les ecrit
+// dans le PDF a l'export. Pas de JavaScript de formulaire (enableScripting:false).
+// Le service de liens est un minimum inerte : les liens du PDF ne sont pas
+// rendus, seuls des boutons de formulaire peuvent y faire appel.
+const SERVICE_LIENS={
+  eventBus:null, externalLinkEnabled:false,
+  getDestinationHash:()=>'#', getAnchorUrl:()=>'#',
+  goToDestination(){}, goToPage(){}, executeNamedAction(){}, executeSetOCGState(){},
+};
+async function rendreChamps(page,vp,wrap){
+  const widgets=(await page.getAnnotations({intent:'display'})).filter(a=>a.subtype==='Widget');
+  if(!widgets.length)return;
+  wrap.style.setProperty('--scale-factor',vp.scale);   // tailles du calque = celles du canvas
+  const div=document.createElement('div');
+  div.className='annotationLayer';
+  wrap.appendChild(div);
+  const calque=new pdfjsLib.AnnotationLayer({div, page, viewport:vp.clone({dontFlip:true}),
+    accessibilityManager:null, annotationCanvasMap:null, annotationEditorUIManager:null, structTreeLayer:null});
+  try{
+    await calque.render({annotations:widgets, imageResourcesPath:'', renderForms:true,
+      linkService:SERVICE_LIENS, downloadManager:null, annotationStorage:pdfDoc.annotationStorage,
+      enableScripting:false, hasJSActions:false, fieldObjects:champsFormulaire});
+  }catch(err){console.warn('[formulaire] page',page.pageNumber,err)}
+}
+// Toute saisie dans un champ compte comme une modification (alerte de fermeture)
+for(const ev of ['input','change'])
+  viewer.addEventListener(ev,e=>{if(e.target.closest?.('.annotationLayer'))revFormulaire++},true);
+const aDesChamps=()=>!!document.querySelector('#viewer .annotationLayer');
 
 // ─── HIT TEST ────────────────────────────────────────────────────────────────
 function hitAnnot(a,p){
@@ -658,6 +705,9 @@ function showFloatingInput(cx,cy,pos,pageNum){
   floatingInput.style.top=Math.min(cy,vh-60)+'px';
   floatingInput.value='';
   ajusterSaisie();
+  // focus tout de suite (le mousedown est annule, rien ne le reprend) : les
+  // premieres lettres tapees juste apres le clic ne sont pas perdues
+  floatingInput.focus();
   requestAnimationFrame(()=>floatingInput.focus());
 }
 // Modifier un texte existant : la zone de saisie s'ouvre a sa place, avec son
@@ -678,7 +728,8 @@ function editerTexte(a){
   floatingInput.style.left=Math.max(0,r.left+a.x*k-12)+'px';
   floatingInput.style.top=Math.max(0,r.top+a.y*k-taille-7)+'px';
   redrawPage(a.page);
-  requestAnimationFrame(()=>{floatingInput.focus();floatingInput.select()});
+  floatingInput.focus(); floatingInput.select();
+  requestAnimationFrame(()=>{if(document.activeElement!==floatingInput){floatingInput.focus();floatingInput.select()}});
 }
 function annulerSaisie(){
   textInputOpen=false; floatingInput.hidden=true;
@@ -821,7 +872,8 @@ function empreinteAnnotations(){
   return JSON.stringify(annotations,(k,v)=>k==='src'?String(v).length:k==='label'?undefined:v);
 }
 function modifsNonSauvees(){
-  return annotations.length>0&&empreinteAnnotations()!==empreinteSauvee;
+  return (annotations.length>0&&empreinteAnnotations()!==empreinteSauvee)
+    ||revFormulaire!==revFormulaireSauvee;
 }
 // Fermeture de l'onglet ou de la fenetre PWA, rechargement, navigation :
 // le navigateur affiche sa propre boite « Quitter le site ? » (texte impose).
@@ -868,9 +920,10 @@ async function exportPDF(){
       bytes=await exporterAplati(); aplati=true;
     }
     telecharger(nomExport(),bytes);
-    empreinteSauvee=empreinteAnnotations();
+    empreinteSauvee=empreinteAnnotations(); revFormulaireSauvee=revFormulaire;
     if(aplati)alert('Ce PDF est protégé ou endommagé : il n\'a pas pu être complété tel quel.\n'+
-      'Il a été exporté en images (une par page) ; son texte n\'est plus sélectionnable.');
+      'Il a été exporté en images (une par page) ; son texte n\'est plus sélectionnable'+
+      (aDesChamps()?' et ses champs de formulaire ne sont plus remplissables (les valeurs saisies sont dans l\'image).':'.'));
   }catch(err){console.error(err);alert('Erreur export : '+err.message)}
   finally{boutons.forEach(b=>b.disabled=false)}
 }
@@ -897,8 +950,13 @@ const HAUTEUR_CAPITALES=.718;   // Helvetica-Bold : centre vertical des tampons
 
 async function exporterSurcouche(){
   if(!pdfOrigBytes)throw new Error('octets d\'origine indisponibles');
+  // Champs remplis : pdf.js ecrit leurs valeurs (et leur apparence, dans la
+  // police du champ) en mise a jour incrementale ; le formulaire reste remplissable.
+  const base=(revFormulaire>0&&pdfDoc.annotationStorage.size>0)
+    ? await pdfDoc.saveDocument() : pdfOrigBytes;
+  if(!annotations.length)return base;
   // EncryptedPDFError si chiffre : on ne sait pas reecrire un PDF chiffre proprement
-  const doc=await PDFDocument.load(pdfOrigBytes,{updateMetadata:false});
+  const doc=await PDFDocument.load(base,{updateMetadata:false});
   const pages=doc.getPages();
   if(pages.length!==totalPages)throw new Error(`pages : ${pages.length} ≠ ${totalPages}`);
   await attendreImages();
@@ -918,7 +976,9 @@ async function exporterSurcouche(){
     for(const a of liste)await poserAnnotation(page,a,cx);   // ordre des calques garde
     page.pushOperators(popGraphicsState());
   }
-  return doc.save();
+  // updateFieldAppearances:false : pdf-lib ne regenere pas (en Helvetica) les
+  // apparences des champs deja ecrites par pdf.js, et n'ajoute pas d'AcroForm.
+  return doc.save({updateFieldAppearances:false});
 }
 
 function inverserMatrice([a,b,c,d,e,f]){
@@ -1053,11 +1113,20 @@ function versBlob(canvas,type){
 // The output is a NEW document, one JPEG page per rendered page: nothing of the
 // source structure is carried over, so a damaged or encrypted source cannot
 // yield a file that will not open.
+async function rendreAvecChamps(num,modele){
+  const page=await pdfDoc.getPage(num), vp=page.getViewport({scale:ECHELLE_AFFICHAGE});
+  const c=document.createElement('canvas'); c.width=modele.width; c.height=modele.height;
+  await page.render({canvasContext:c.getContext('2d'),viewport:vp,
+    annotationMode:pdfjsLib.AnnotationMode.ENABLE_STORAGE}).promise;
+  return c;
+}
 async function exporterAplati(){
     const sortie=await PDFDocument.create();
     const containers=document.querySelectorAll('.page-container');
     for(let i=0;i<containers.length;i++){
-      const base=containers[i].querySelector('canvas:not(.overlay-canvas)');
+      let base=containers[i].querySelector('canvas:not(.overlay-canvas)');
+      // Le canvas affiche n'a pas les champs (calque HTML) : rendu avec leurs valeurs
+      if(containers[i].querySelector('.annotationLayer'))base=await rendreAvecChamps(i+1,base);
       const over=containers[i].querySelector('.overlay-canvas');
       const merged=document.createElement('canvas');
       merged.width=base.width; merged.height=base.height;
@@ -1118,7 +1187,9 @@ async function imprimer(){
       c.width=Math.round(vp.width); c.height=Math.round(vp.height);
       const ctx=c.getContext('2d');
       ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
-      await page.render({canvasContext:ctx,viewport:vp}).promise;
+      // ENABLE_STORAGE : les champs de formulaire sont imprimes avec les valeurs saisies
+      await page.render({canvasContext:ctx,viewport:vp,intent:'print',
+        annotationMode:pdfjsLib.AnnotationMode.ENABLE_STORAGE}).promise;
       ctx.save(); ctx.scale(k,k); dessinerAnnotations(ctx,i,false); ctx.restore();
       // image JPEG plutot que le canvas : libere la memoire page par page
       const img=new Image();
