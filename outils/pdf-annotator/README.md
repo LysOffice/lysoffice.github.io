@@ -12,7 +12,7 @@ Ouvrez un PDF, annotez-le, signez-le, tamponnez-le, puis exportez ou imprimez. A
 
 - 📂 **Ouverture facile** : glisser-déposer, bouton « Ouvrir un PDF », lien direct (`?pdf=…`) ou « Ouvrir avec » depuis l'Explorateur Windows
 - ✏️ **Dessin à main levée** avec 8 couleurs et une épaisseur de trait réglable
-- 🔤 **Zones de texte** sur plusieurs lignes (`Maj + Entrée`) : police et taille modifiables après coup
+- 🔤 **Zones de texte** sur plusieurs lignes (`Maj + Entrée`) : contenu, police et taille modifiables après coup (double-clic sur le texte)
 - 🖍️ **Surligneur** à opacité réglable
 - 🧽 **Gomme** pour effacer une annotation
 - 🖱️ **Sélection** : déplacer, redimensionner ou supprimer chaque annotation
@@ -39,7 +39,7 @@ Ouvrez un PDF, annotez-le, signez-le, tamponnez-le, puis exportez ou imprimez. A
 | `P`                 | Tampon                        |
 | `Suppr` / `Retour`  | Supprimer la sélection        |
 | `Échap`             | Désélectionner                |
-| `Entrée`            | Valider un texte en cours de saisie |
+| `Entrée`            | Valider un texte en cours de saisie ; modifier le texte sélectionné |
 | `Maj + Entrée`      | Nouvelle ligne dans un texte  |
 | `Ctrl + Z`          | Annuler                       |
 | `Ctrl + P`          | Imprimer le PDF annoté        |
@@ -95,6 +95,8 @@ Depuis Chrome ou Edge, cliquez sur l'icône d'installation dans la barre d'adres
 
 ## 💡 Bon à savoir
 
+- **Saisie de texte** : un clic ailleurs sur la page valide le texte en cours ; `Échap` l'annule. Pour modifier un texte déjà posé : double-clic dessus, clic dessus avec l'outil Texte, `Entrée`, ou le bouton « Modifier le texte ». Vider un texte le supprime.
+- **Fermeture** : s'il reste des annotations non exportées, le navigateur (ou la fenêtre de l'application installée) demande confirmation avant de fermer, de recharger ou de quitter la page, et l'ouverture d'un autre PDF est aussi confirmée. Le texte de la boîte est imposé par le navigateur.
 - **Export en surcouche** : le PDF d'origine est conservé tel quel (texte, polices, liens, formulaires) et les annotations sont ajoutées par-dessus, en vectoriel : traits et surligneur en tracés, textes et tampons en vrai texte (polices standard PDF : Helvetica, Times, Courier, non embarquées), signatures en images. Le fichier reste léger et son texte reste sélectionnable et indexable.
 - **Caractères spéciaux** : une annotation que les polices standard ne savent pas écrire (emoji, ⚡ du tampon « Urgent »…) est ajoutée en image PNG à 300 ppp, à sa place exacte.
 - **Polices** : à l'export, « Sans-serif » et « Arial » deviennent Helvetica, « Serif » Times, « Mono » Courier ; la largeur du texte peut varier légèrement par rapport à l'écran.

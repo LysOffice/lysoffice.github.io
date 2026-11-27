@@ -106,6 +106,8 @@ header{background:var(--header-bg);border-bottom:1px solid var(--header-border);
 .ctx-select:focus{border-color:var(--accent)}
 .ctx-sz-range{-webkit-appearance:none;flex:1;height:4px;background:var(--accent-border);border-radius:2px;outline:none}
 .ctx-sz-range::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--accent);border-radius:50%;cursor:pointer}
+.ctx-btn{background:#fff;border:1px solid var(--accent-border);color:var(--accent);padding:5px 8px;border-radius:5px;font-size:11px;font-family:var(--mono);cursor:pointer}
+.ctx-btn:hover{border-color:var(--accent);background:var(--accent-light)}
 .ctx-sz-val{font-family:var(--mono);font-size:10px;color:var(--accent);min-width:22px;text-align:right}
 
 /* annot list */

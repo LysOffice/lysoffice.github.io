@@ -21,7 +21,7 @@ const $ = (id) => document.getElementById(id);
 
 // Version de l'outil : affichee sous le bouton d'export et au survol du logo,
 // pour verifier d'un coup d'oeil que le navigateur a charge la bonne version.
-const APP_VERSION='2.4 — sélection par défaut, texte multiligne';
+const APP_VERSION='2.5 — texte modifiable, validation au clic, alerte avant fermeture';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let pdfDoc=null, currentPage=1, totalPages=0;
@@ -42,6 +42,8 @@ let isDrawing=false, currentPath=[];
 
 // text input
 let textInputOpen=false, pendingPos=null, pendingPage=null;
+let idEnEdition=null;   // texte existant en cours de modification (masque pendant la saisie)
+let empreinteSauvee='[]';   // annotations au dernier export / a l'ouverture (alerte de fermeture)
 
 // taille maxi d'une signature a sa pose (px du canvas d'affichage)
 const SIG_POSE_MAX_W=260, SIG_POSE_MAX_H=110;
@@ -183,10 +185,13 @@ async function ouvrirDocument(octets, nom){
   $('emptyState').hidden=true;
   $('pageNav').hidden=false;
   updateAnnotList();
+  empreinteSauvee=empreinteAnnotations();
   await renderAllPages();
 }
 async function loadPDF(f){
   if(!f)return;
+  if(modifsNonSauvees()&&!confirm('Les annotations du PDF en cours n\'ont pas été exportées.\n'+
+    'Ouvrir « '+f.name+' » quand même ? Elles seront perdues.'))return;
   try{
     const tampon=await f.arrayBuffer();
     await ouvrirDocument(new Uint8Array(tampon), f.name);
@@ -288,10 +293,19 @@ function setupCanvas(canvas,pageNum){
   canvas.addEventListener('mousemove', e=>onMove(e,canvas,pageNum));
   canvas.addEventListener('mouseup',   e=>onUp(e,canvas,pageNum));
   canvas.addEventListener('mouseleave',e=>onUp(e,canvas,pageNum));
+  // Double-clic sur un texte (outil Selection) : le modifier
+  canvas.addEventListener('dblclick', e=>{
+    if(currentTool!=='select'||textInputOpen)return;
+    const a=findAt(getPos(canvas,e),pageNum);
+    if(a?.type==='text'){e.preventDefault();editerTexte(a)}
+  });
 }
 
 function onDown(e,canvas,pageNum){
   const pos=getPos(canvas,e);
+  // Une saisie de texte est ouverte : un clic sur la page la VALIDE (et ne fait
+  // rien d'autre), au lieu d'ouvrir une nouvelle zone vide qui la remplacait.
+  if(textInputOpen){e.preventDefault();confirmText();return}
 
   if(currentTool==='select'){
     // First check resize handles on selected annotation
@@ -342,6 +356,10 @@ function onDown(e,canvas,pageNum){
     redrawPage(pageNum);selectAnnot(id);setTool('select');return;
   }
   if(currentTool==='text'){
+    // Clic sur un texte existant avec l'outil Texte : le modifier
+    const exist=findAt(pos,pageNum);
+    if(exist?.type==='text'){e.preventDefault();editerTexte(exist);return}
+    e.preventDefault();   // garde le focus sur la zone de saisie qui s'ouvre
     showFloatingInput(e.clientX,e.clientY,pos,pageNum);
   }
 }
@@ -548,7 +566,7 @@ function redrawAnnotations(canvas,pageNum){
 // Dessine les annotations d'une page dans ctx, en coordonnees d'affichage
 // (ECHELLE_AFFICHAGE) : appliquer ctx.scale() avant pour une autre resolution.
 function dessinerAnnotations(ctx,pageNum,avecSelection){
-  annotations.filter(a=>a.page===pageNum).forEach(a=>
+  annotations.filter(a=>a.page===pageNum&&a.id!==idEnEdition).forEach(a=>
     dessinerAnnotation(ctx,a,avecSelection&&a.id===selectedAnnotId));
 }
 function dessinerAnnotation(ctx,a,sel){
@@ -628,6 +646,7 @@ function drawStamp(ctx,a){
 // ─── TEXT INPUT ───────────────────────────────────────────────────────────────
 const floatingInput=$('floatingInput');
 function showFloatingInput(cx,cy,pos,pageNum){
+  idEnEdition=null;
   pendingPos=pos; pendingPage=pageNum; textInputOpen=true;
   floatingInput.hidden=false;
   const fontSize=parseInt($('textSizeRange').value);
@@ -641,10 +660,34 @@ function showFloatingInput(cx,cy,pos,pageNum){
   ajusterSaisie();
   requestAnimationFrame(()=>floatingInput.focus());
 }
+// Modifier un texte existant : la zone de saisie s'ouvre a sa place, avec son
+// contenu, sa police, sa taille et sa couleur ; le texte est masque pendant ce temps.
+function editerTexte(a){
+  const c=document.querySelector(`.page-container[data-page="${a.page}"] .overlay-canvas`);
+  if(!c)return;
+  const r=c.getBoundingClientRect(), k=r.width/c.width;
+  idEnEdition=a.id; pendingPos={x:a.x,y:a.y}; pendingPage=a.page; textInputOpen=true;
+  const taille=Math.min(Math.max(a.size*k,11),72);
+  Object.assign(floatingInput.style,{fontSize:taille+'px', fontFamily:a.font,
+    color:a.color==='#ffffff'?'#222':a.color});
+  floatingInput.value=a.text;
+  floatingInput.hidden=false;
+  ajusterSaisie();
+  // bord + marge interne de la zone (2 + 5 px en haut, 2 + 10 px a gauche) ;
+  // la 1re ligne de base tombe ~ a la taille de police sous le haut du texte
+  floatingInput.style.left=Math.max(0,r.left+a.x*k-12)+'px';
+  floatingInput.style.top=Math.max(0,r.top+a.y*k-taille-7)+'px';
+  redrawPage(a.page);
+  requestAnimationFrame(()=>{floatingInput.focus();floatingInput.select()});
+}
+function annulerSaisie(){
+  textInputOpen=false; floatingInput.hidden=true;
+  if(idEnEdition!==null){const p=pendingPage;idEnEdition=null;redrawPage(p)}
+}
 // Entree : valide ; Maj+Entree : nouvelle ligne (comportement natif du textarea)
 floatingInput.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();confirmText()}
-  if(e.key==='Escape'){textInputOpen=false;floatingInput.hidden=true}
+  if(e.key==='Escape'){e.preventDefault();annulerSaisie()}
 });
 // La zone grandit avec le texte (field-sizing:content dans la feuille ;
 // repli pour les navigateurs qui ne le gerent pas).
@@ -662,9 +705,18 @@ function confirmText(){
   if(!textInputOpen)return; textInputOpen=false; floatingInput.hidden=true;
   // fins de ligne normalisees, espaces de fin de ligne et lignes vides aux bords retires
   const text=floatingInput.value.replace(/\r\n?/g,'\n').split('\n').map(l=>l.replace(/\s+$/,'')).join('\n').replace(/^\n+|\n+$/g,'');
+  const etiquette='Texte: '+text.replace(/\n/g,' ⏎ ').slice(0,14);
+  if(idEnEdition!==null){
+    const a=annotations.find(x=>x.id===idEnEdition); idEnEdition=null;
+    if(!a)return;
+    if(!text){deleteAnnotById(a.id);return}   // texte vide : l'annotation est supprimee
+    a.text=text; a.label=etiquette;
+    redrawPage(a.page); selectAnnot(a.id); setTool('select');
+    return;
+  }
   if(text&&pendingPos){
     const fontSize=parseInt($('textSizeRange').value);
-    const id=addAnnot({type:'text',page:pendingPage,x:pendingPos.x,y:pendingPos.y,text,color:currentColor,size:fontSize,font:$('textFont').value,label:'Texte: '+text.replace(/\n/g,' ⏎ ').slice(0,14)});
+    const id=addAnnot({type:'text',page:pendingPage,x:pendingPos.x,y:pendingPos.y,text,color:currentColor,size:fontSize,font:$('textFont').value,label:etiquette});
     redrawPage(pendingPage); selectAnnot(id); setTool('select');
   }
 }
@@ -755,6 +807,29 @@ document.addEventListener('keydown',e=>{
   if(map[k])setTool(map[k]);
   if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();deleteSelected()}
   if(e.key==='Escape')deselectAnnot(true);
+  if((e.key==='Enter'||e.key==='F2')&&e.target===document.body){
+    const a=annotations.find(x=>x.id===selectedAnnotId);
+    if(a?.type==='text'){e.preventDefault();editerTexte(a)}
+  }
+});
+
+// ─── ALERTE AVANT FERMETURE ──────────────────────────────────────────────────
+// Empreinte des annotations au dernier export (ou a l'ouverture) : on ne
+// previent que si quelque chose a change depuis. Les images (signatures) sont
+// resumees par leur longueur pour garder le calcul instantane.
+function empreinteAnnotations(){
+  return JSON.stringify(annotations,(k,v)=>k==='src'?String(v).length:k==='label'?undefined:v);
+}
+function modifsNonSauvees(){
+  return annotations.length>0&&empreinteAnnotations()!==empreinteSauvee;
+}
+// Fermeture de l'onglet ou de la fenetre PWA, rechargement, navigation :
+// le navigateur affiche sa propre boite « Quitter le site ? » (texte impose).
+window.addEventListener('beforeunload',e=>{
+  if(textInputOpen)confirmText();
+  if(!modifsNonSauvees())return;
+  e.preventDefault();
+  e.returnValue='';   // anciens Chromium
 });
 
 // ─── EXPORT ──────────────────────────────────────────────────────────────────
@@ -793,6 +868,7 @@ async function exportPDF(){
       bytes=await exporterAplati(); aplati=true;
     }
     telecharger(nomExport(),bytes);
+    empreinteSauvee=empreinteAnnotations();
     if(aplati)alert('Ce PDF est protégé ou endommagé : il n\'a pas pu être complété tel quel.\n'+
       'Il a été exporté en images (une par page) ; son texte n\'est plus sélectionnable.');
   }catch(err){console.error(err);alert('Erreur export : '+err.message)}
@@ -1118,6 +1194,10 @@ function cabler(){
   });
   $('ctxFont').addEventListener('change',applyTextCtx);
   $('ctxSize').addEventListener('input',applyTextCtx);
+  $('ctxEdit').addEventListener('click',()=>{
+    const a=annotations.find(x=>x.id===selectedAnnotId);
+    if(a?.type==='text')editerTexte(a);
+  });
   $('prevPage').addEventListener('click',()=>changePage(-1));
   $('nextPage').addEventListener('click',()=>changePage(1));
   $('errorClose').addEventListener('click',()=>{$('errorBanner').hidden=true});
