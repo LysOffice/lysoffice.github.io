@@ -84,12 +84,12 @@ header{background:var(--header-bg);border-bottom:1px solid var(--header-border);
 .stamp-preview.confidential{border:2px solid #2563eb;color:#2563eb;font-size:7px}
 .stamp-preview.draft{border:2px dashed #d97706;color:#d97706}
 .stamp-preview.urgent{border:2px solid #dc2626;color:#dc2626;font-size:8px}
-.stamp-preview.copy{border:2px solid #64748b;color:#64748b}
+.stamp-preview.paye{border:2px solid #64748b;color:#64748b}
 .stamp-preview.recu{border:2px solid #2563eb;color:#2563eb}
 .stamp-preview.comptabilise{border:2px solid #7c3aed;color:#7c3aed;font-size:7px}
 .stamp-preview.duplicata{border:2px solid #0f766e;color:#0f766e}
 .stamp-preview.restreinte{border:2px solid #b91c1c;color:#b91c1c;font-size:7px}
-.stamp-preview.recu,.stamp-preview.comptabilise,.stamp-preview.restreinte{flex-direction:column;line-height:1.15;gap:1px}
+.stamp-preview.recu,.stamp-preview.comptabilise,.stamp-preview.paye,.stamp-preview.restreinte{flex-direction:column;line-height:1.15;gap:1px}
 .stamp-date{font-size:8px}
 .stamp-date-champ{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:7px;font-size:10px;font-family:var(--mono);color:var(--text-2)}
 .stamp-date-champ input{border:1px solid var(--border-strong);border-radius:5px;padding:3px 5px;font-family:var(--sans);font-size:11px;color:var(--text);background:#fff;outline:none}

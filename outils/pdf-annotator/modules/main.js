@@ -21,7 +21,7 @@ const $ = (id) => document.getElementById(id);
 
 // Version de l'outil : affichee sous le bouton d'export et au survol du logo,
 // pour verifier d'un coup d'oeil que le navigateur a charge la bonne version.
-const APP_VERSION='2.6 — formulaires PDF remplissables';
+const APP_VERSION='2.7 — tampon « Payé le » (remplace « Copie »)';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let pdfDoc=null, currentPage=1, totalPages=0;
@@ -61,7 +61,7 @@ const STAMPS={
   confidential:{lignes:['CONFIDENTIEL'],             color:'#2563eb',dash:false},
   draft:       {lignes:['BROUILLON'],                color:'#d97706',dash:true },
   urgent:      {lignes:['⚡ URGENT'],                color:'#dc2626',dash:false},
-  copy:        {lignes:['COPIE'],                    color:'#64748b',dash:false},
+  paye:        {lignes:['PAYÉ LE','{date}'],         color:'#64748b',dash:false},
   recu:        {lignes:['REÇU LE','{date}'],         color:'#2563eb',dash:false},
   comptabilise:{lignes:['COMPTABILISÉ LE','{date}'], color:'#7c3aed',dash:false},
   duplicata:   {lignes:['DUPLICATA'],                color:'#0f766e',dash:false},

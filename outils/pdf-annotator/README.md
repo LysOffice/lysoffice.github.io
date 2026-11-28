@@ -18,7 +18,7 @@ Ouvrez un PDF, annotez-le, signez-le, tamponnez-le, puis exportez ou imprimez. A
 - 🧽 **Gomme** pour effacer une annotation
 - 🖱️ **Sélection** : déplacer, redimensionner ou supprimer chaque annotation
 - ✍️ **Catalogue de signatures** : dessinées à la souris, au stylet ou au doigt, ou importées depuis une image avec retrait automatique du fond
-- 🔖 **Tampons datés** : Reçu le, Comptabilisé le, Approuvé, Refusé, Urgent, Confidentiel, Brouillon, Copie, Duplicata, Diffusion restreinte
+- 🔖 **Tampons datés** : Reçu le, Comptabilisé le, Payé le, Approuvé, Refusé, Urgent, Confidentiel, Brouillon, Duplicata, Diffusion restreinte
 - 📋 **Liste des annotations** du document dans le panneau latéral
 - ⬇️ **Export** en `<nom-du-fichier>-annoté.pdf` : les annotations sont **ajoutées en surcouche** au PDF d'origine, qui reste intact (texte sélectionnable, poids léger)
 - 🖨️ **Impression** du PDF annoté au format réel des pages (et non de l'interface)

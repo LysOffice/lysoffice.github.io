@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annoter un PDF — Signature &amp; Tampons</title>
 <link rel="stylesheet" href="/outils/pdf-annotator/vendor/pdfjs/annotation_layer.css?v=5">
-<link rel="stylesheet" href="/outils/pdf-annotator/pdf-annotator.css?v=5">
+<link rel="stylesheet" href="/outils/pdf-annotator/pdf-annotator.css?v=6">
 <!-- PWA : installable depuis Edge/Chrome, ouvre les .pdf via « Ouvrir avec » -->
 <link rel="manifest" href="/outils/pdf-annotator/manifest.webmanifest" crossorigin="use-credentials">
 <link rel="icon" type="image/png" href="/outils/pdf-annotator/icons/favicon-32.png">
@@ -149,9 +149,9 @@
           <div class="stamp-preview urgent">⚡ URGENT</div>
           <div class="stamp-lbl">Urgent</div>
         </div>
-        <div class="stamp-item" id="stamp-copy" data-stamp="copy" role="button" tabindex="0">
-          <div class="stamp-preview copy">COPIE</div>
-          <div class="stamp-lbl">Copie</div>
+        <div class="stamp-item" id="stamp-paye" data-stamp="paye" role="button" tabindex="0">
+          <div class="stamp-preview paye"><span>PAYÉ LE</span><span class="stamp-date"></span></div>
+          <div class="stamp-lbl">Payé le…</div>
         </div>
       </div>
     </div>
@@ -328,6 +328,6 @@
   </div>
 </dialog>
 
-<script type="module" src="/outils/pdf-annotator/modules/main.js?v=5"></script>
+<script type="module" src="/outils/pdf-annotator/modules/main.js?v=6"></script>
 </body>
 </html>
